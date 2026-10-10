@@ -734,6 +734,14 @@ table.report th.num {
   gap: 10px;
   margin-bottom: 28px;
   color: var(--blue);
+}
+
+.onboarding .brand-left {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  white-space: nowrap;
+}
   font-size: 22px;
   font-weight: 800;
 }
