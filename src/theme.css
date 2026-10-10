@@ -508,6 +508,76 @@ table.report th.num {
   font-weight: 800;
 }
 
+.steps-dots {
+  display: flex;
+  justify-content: center;
+  gap: 8px;
+  margin-bottom: 28px;
+}
+
+.steps-dots span {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: var(--border);
+}
+
+.steps-dots span.active {
+  background: var(--blue);
+}
+
+.steps-dots span.done {
+  background: var(--blue);
+  opacity: 0.45;
+}
+
+.lang-pick {
+  display: flex;
+  gap: 16px;
+  justify-content: center;
+  margin-bottom: 36px;
+  flex-wrap: wrap;
+}
+
+.lang-card {
+  background: var(--card);
+  border: 2px solid var(--border);
+  border-radius: var(--radius);
+  padding: 28px 36px;
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 220px;
+  transition: border-color 0.12s, transform 0.12s;
+}
+
+.lang-card:hover {
+  transform: translateY(-2px);
+}
+
+.lang-card.selected {
+  border-color: var(--blue);
+  background: var(--blue-light);
+}
+
+.lang-card .lang-big {
+  font-size: 24px;
+  font-weight: 800;
+}
+
+.lang-card .lang-sub {
+  font-size: 14px;
+  color: var(--ink-soft);
+}
+
+.wizard-nav {
+  display: flex;
+  justify-content: center;
+  gap: 12px;
+  margin-top: 28px;
+}
+
 /* ---------- settings ---------- */
 
 .settings-row {

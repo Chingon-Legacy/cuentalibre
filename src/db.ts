@@ -143,4 +143,7 @@ export async function importBackup(data: BackupData): Promise<void> {
   if (data.businessType) {
     await setSetting("businessType", data.businessType);
   }
+  if (typeof data.businessName === "string") {
+    await setSetting("businessName", data.businessName);
+  }
 }

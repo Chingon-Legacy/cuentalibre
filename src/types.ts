@@ -28,6 +28,7 @@ export interface BackupData {
   version: 1;
   exportedAt: string;
   businessType: string;
+  businessName: string;
   invoices: Invoice[];
   expenses: Expense[];
 }

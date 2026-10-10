@@ -19,9 +19,16 @@ const en = {
   },
 
   onboarding: {
-    title: "What kind of business do you have?",
-    subtitle:
+    langTitle: "Choose your language",
+    langSub: "You can change this anytime in Settings.",
+    nameTitle: "What's your business called?",
+    nameSub: "This appears at the top of your app and on your invoices.",
+    namePh: "Business name",
+    bizTitle: "What kind of business do you have?",
+    bizSub:
       "We'll set up the right money categories for you. You can change this later in Settings.",
+    back: "Back",
+    next: "Continue",
     start: "Start using CuentaLibre",
   },
 
@@ -105,6 +112,7 @@ const en = {
     title: "Settings",
     language: "Language",
     businessType: "Business type",
+    businessName: "Business name",
     backupTitle: "Your data",
     saveWork: "Save work",
     saveWorkDesc: "Download a backup file to your computer.",
@@ -140,9 +148,16 @@ const es: typeof en = {
   },
 
   onboarding: {
-    title: "¿Qué tipo de negocio tienes?",
-    subtitle:
+    langTitle: "Elige tu idioma",
+    langSub: "Puedes cambiarlo cuando quieras en Ajustes.",
+    nameTitle: "¿Cómo se llama tu negocio?",
+    nameSub: "Aparecerá en la parte superior de tu app y en tus facturas.",
+    namePh: "Nombre del negocio",
+    bizTitle: "¿Qué tipo de negocio tienes?",
+    bizSub:
       "Prepararemos las categorías adecuadas para ti. Puedes cambiarlo después en Ajustes.",
+    back: "Atrás",
+    next: "Continuar",
     start: "Empezar a usar CuentaLibre",
   },
 
@@ -226,6 +241,7 @@ const es: typeof en = {
     title: "Ajustes",
     language: "Idioma",
     businessType: "Tipo de negocio",
+    businessName: "Nombre del negocio",
     backupTitle: "Tus datos",
     saveWork: "Guardar respaldo",
     saveWorkDesc: "Descarga un archivo de respaldo a tu computadora.",

@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useBiz, useLangState } from "../App";
+import { useBiz, useBizName, useLangState } from "../App";
 import { openBackup, saveWork } from "../backup";
 import { getSetting } from "../db";
 import { businessTypes } from "../data/categories";
@@ -13,6 +13,7 @@ export default function Settings({ refresh }: { refresh: () => Promise<void> }) 
   const lang = useLang();
   const { lang: cur, setLang } = useLangState();
   const { biz, setBiz } = useBiz();
+  const { bizName, setBizName } = useBizName();
   const [note, setNote] = useState<{ msg: string; error: boolean } | null>(null);
   const [working, setWorking] = useState(false);
 
@@ -39,6 +40,8 @@ export default function Settings({ refresh }: { refresh: () => Promise<void> }) 
         await refresh();
         const saved = await getSetting("businessType");
         if (saved) setBiz(saved);
+        const savedName = await getSetting("businessName");
+        if (savedName) setBizName(savedName);
         setNote({ msg: t.settings.restored, error: false });
       } else if (res === "invalid") {
         setNote({ msg: t.settings.restoreFailed, error: true });
@@ -72,6 +75,21 @@ export default function Settings({ refresh }: { refresh: () => Promise<void> }) 
                 {l.toUpperCase()}
               </button>
             ))}
+          </div>
+        </div>
+
+        <div className="settings-row">
+          <div>
+            <div className="label">{t.settings.businessName}</div>
+          </div>
+          <div className="field" style={{ minWidth: 220 }}>
+            <input
+              type="text"
+              value={bizName}
+              maxLength={80}
+              placeholder={t.settings.businessName}
+              onChange={(e) => setBizName(e.target.value)}
+            />
           </div>
         </div>
 
