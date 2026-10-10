@@ -38,6 +38,10 @@ export async function saveWork(): Promise<boolean> {
     trips: all.trips,
     loans: all.loans,
     loanPayments: all.loanPayments,
+    donations: all.donations,
+    budgets: all.budgets,
+    products: all.products,
+    purchaseOrders: all.purchaseOrders,
   };
   const today = new Date().toISOString().slice(0, 10);
   const path = await save({

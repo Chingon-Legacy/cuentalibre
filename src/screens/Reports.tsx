@@ -8,9 +8,9 @@ import { US_STATES } from "../data/us-states";
 import { tripDeduction } from "../data/mileage-rates";
 import { fmtDate, fmtMoney, todayISO, useLang, useStrings } from "../i18n";
 import { nfpDeadlineDate } from "./Home";
-import type { Bill, Contractor, ContractorPayment, Donation, Expense, Invoice, Trip } from "../types";
+import type { Bill, Contractor, ContractorPayment, Donation, Expense, Invoice, Loan, LoanPayment, Trip } from "../types";
 
-type ReportId = "summary" | "income" | "expenses" | "owes" | "tax" | "monthly" | "taxguide";
+type ReportId = "summary" | "income" | "expenses" | "owes" | "tax" | "monthly" | "taxguide" | "accountant";
 
 interface Props {
   invoices: Invoice[];
@@ -20,6 +20,8 @@ interface Props {
   contractorPayments: ContractorPayment[];
   trips: Trip[];
   donations: Donation[];
+  loans: Loan[];
+  loanPayments: LoanPayment[];
 }
 
 function firstOfMonth(): string {
@@ -349,7 +351,7 @@ function NfpAnnualReport({
   );
 }
 
-export default function Reports({ invoices, expenses, bills, contractors, contractorPayments, trips, donations }: Props) {
+export default function Reports({ invoices, expenses, bills, contractors, contractorPayments, trips, donations, loans, loanPayments }: Props) {
   const t = useStrings();
   const lang = useLang();
   const { pack, active, bizName, isNonprofit, accountingMethod } = useBiz();
@@ -417,6 +419,49 @@ export default function Reports({ invoices, expenses, bills, contractors, contra
   const taxCollected = incomeInRange.reduce((s, i) => s + i.tax_amount, 0);
   const incomeByCat = useMemo(() => groupByCategory(incomeInRange), [incomeInRange]);
   const expensesByCat = useMemo(() => groupByCategory(expInRange), [expInRange]);
+
+  /* Accountant export: every transaction in one flat list, oldest first. */
+  interface AcctRow { date: string; type: string; who: string; category: string; amount: number }
+  const accountantRows: AcctRow[] = useMemo(() => {
+    const rows: AcctRow[] = [];
+    for (const i of invoices) {
+      if (!inRange(i.due_date)) continue;
+      rows.push({
+        date: i.due_date,
+        type: `${t.reports.acctInvoice} #${i.number} (${i.status === "paid" ? t.reports.paid : t.reports.waiting})`,
+        who: i.customer,
+        category: catLabel(i.category),
+        amount: invoiceTotal(i),
+      });
+    }
+    for (const e of expenses) {
+      if (!inRange(e.date)) continue;
+      rows.push({ date: e.date, type: t.reports.acctExpense, who: e.description, category: catLabel(e.category), amount: e.amount });
+    }
+    for (const b of bills) {
+      if (!inRange(b.due_date)) continue;
+      rows.push({ date: b.due_date, type: `${t.reports.acctBill} (${b.status === "paid" ? t.reports.paid : t.reports.waiting})`, who: b.payee, category: catLabel(b.category), amount: b.amount });
+    }
+    if (isNonprofit) {
+      for (const d of donations) {
+        if (!inRange(d.date)) continue;
+        rows.push({ date: d.date, type: t.reports.acctDonation, who: d.donor, category: d.campaign || "—", amount: d.amount });
+      }
+    }
+    const contractorName = (id: number) => contractors.find((c) => c.id === id)?.name ?? "";
+    for (const p of contractorPayments) {
+      if (!inRange(p.date)) continue;
+      rows.push({ date: p.date, type: t.reports.acctContractor, who: contractorName(p.contractor_id), category: p.note || "—", amount: p.amount });
+    }
+    const loanName = (id: number) => loans.find((l) => l.id === id)?.name ?? "";
+    for (const p of loanPayments) {
+      if (!inRange(p.date)) continue;
+      rows.push({ date: p.date, type: t.reports.acctLoan, who: loanName(p.loan_id), category: p.note || "—", amount: p.amount });
+    }
+    rows.sort((a, b) => a.date.localeCompare(b.date));
+    return rows;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [invoices, expenses, bills, donations, contractorPayments, loanPayments, contractors, loans, from, to, isNonprofit, lang]);
 
   const payMethodLabel = (m: string | null): string => {
     if (m === "cash") return t.paymethod.cash;
@@ -502,6 +547,7 @@ export default function Reports({ invoices, expenses, bills, contractors, contra
         { id: "expenses", label: t.reports.tExpensesByCat },
         { id: "owes", label: t.reports.tWhoOwes },
         { id: "monthly", label: t.reports.tMonthly },
+        { id: "accountant", label: t.reports.tAccountant },
       ]
     : [
         { id: "summary", label: t.reports.tSummary },
@@ -511,6 +557,7 @@ export default function Reports({ invoices, expenses, bills, contractors, contra
         { id: "tax", label: t.reports.tTax },
         { id: "taxguide", label: t.reports.tTaxGuide },
         { id: "monthly", label: t.reports.tMonthly },
+        { id: "accountant", label: t.reports.tAccountant },
       ];
 
   const pickReport = (id: ReportId) => {
@@ -573,6 +620,9 @@ export default function Reports({ invoices, expenses, bills, contractors, contra
         [t.reports.keepRecordsWhy, ""],
         [t.reports.disclaimer, ""],
       ];
+    } else if (report === "accountant") {
+      headers = [t.reports.acctDate, t.reports.acctType, t.reports.acctWho, t.reports.acctCategory, t.reports.acctAmount];
+      rows = accountantRows.map((r) => [r.date, r.type, r.who, r.category, money(r.amount)]);
     } else {
       headers = [t.reports.month, t.reports.moneyIn, t.reports.moneyOut, t.reports.left];
       rows = months.map((m) => [m.label, money(m.in), money(m.out), money(m.in - m.out)]);
@@ -743,7 +793,9 @@ export default function Reports({ invoices, expenses, bills, contractors, contra
               ? incomeInRange.length > 0 || expInRange.length > 0
               : report === "taxguide"
                 ? incomeInRange.length > 0 || expInRange.length > 0
-                : months.some((m) => m.in > 0 || m.out > 0);
+                : report === "accountant"
+                  ? accountantRows.length > 0
+                  : months.some((m) => m.in > 0 || m.out > 0);
 
   return (
     <div className="page">
@@ -997,6 +1049,34 @@ export default function Reports({ invoices, expenses, bills, contractors, contra
               <p className="tax-why">{t.reports.keepRecordsWhy}</p>
             </div>
             <p className="disclaimer">{t.reports.disclaimer}</p>
+          </>
+        ) : report === "accountant" ? (
+          <>
+            <p className="subtitle">📎 {t.reports.acctDesc}</p>
+            <div className="table-scroll">
+            <table className="report responsive-table">
+              <thead>
+                <tr>
+                  <th>{t.reports.acctDate}</th>
+                  <th>{t.reports.acctType}</th>
+                  <th>{t.reports.acctWho}</th>
+                  <th>{t.reports.acctCategory}</th>
+                  <th className="num">{t.reports.acctAmount}</th>
+                </tr>
+              </thead>
+              <tbody>
+                {accountantRows.map((r, idx) => (
+                  <tr key={idx}>
+                    <td data-label={t.reports.acctDate}>{fmtDate(r.date, lang)}</td>
+                    <td data-label={t.reports.acctType}>{r.type}</td>
+                    <td data-label={t.reports.acctWho}>{r.who}</td>
+                    <td data-label={t.reports.acctCategory}>{r.category}</td>
+                    <td className="num" data-label={t.reports.acctAmount}>{fmtMoney(r.amount, lang)}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+            </div>
           </>
         ) : (
           <div className="table-scroll">

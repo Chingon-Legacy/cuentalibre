@@ -3,13 +3,15 @@ import { fmtDate, fmtMoney, todayISO, useLang, useStrings } from "../i18n";
 import { useBiz } from "../App";
 import { saveWork } from "../backup";
 import { getSetting, invoiceTotal } from "../db";
-import type { Bill, Donation, Expense, Invoice, Screen } from "../types";
+import type { Bill, Budget, Donation, Expense, Invoice, Product, Screen } from "../types";
 
 interface Props {
   invoices: Invoice[];
   expenses: Expense[];
   bills: Bill[];
   donations: Donation[];
+  budgets: Budget[];
+  products: Product[];
   go: (s: Screen) => void;
 }
 
@@ -580,6 +582,136 @@ function DonationsMonthCard({ donations, go }: { donations: Donation[]; go: (s: 
   );
 }
 
+/** Budgets for the current month, with plain-words progress. Only renders
+ *  when at least one budget exists for this month. */
+function BudgetsCard({
+  budgets,
+  expenses,
+  go,
+}: {
+  budgets: Budget[];
+  expenses: Expense[];
+  go: (s: Screen) => void;
+}) {
+  const t = useStrings();
+  const lang = useLang();
+  const { pack } = useBiz();
+  const mk = todayISO().slice(0, 7);
+
+  const catLabel = (id: string) => {
+    const c = pack.expense.find((x) => x.id === id);
+    return c ? (lang === "es" ? c.es : c.en) : id;
+  };
+
+  const rows = budgets
+    .filter((b) => b.month === mk && b.amount > 0)
+    .map((b) => {
+      const spent = expenses
+        .filter((e) => e.date.startsWith(mk) && e.category === b.category)
+        .reduce((s, e) => s + e.amount, 0);
+      const pct = Math.round((spent / b.amount) * 100);
+      const over = spent > b.amount;
+      return { budget: b, spent, pct, over, near: !over && pct >= 90 };
+    })
+    .sort((a, b) => b.pct - a.pct);
+
+  if (rows.length === 0) return null;
+
+  return (
+    <div className="panel">
+      <div className="toolbar">
+        <h2 style={{ margin: 0 }}>💰 {t.home.budgetsTitle}</h2>
+        <button type="button" className="btn small" onClick={() => go("budgets")}>
+          {t.home.budgetsViewAll}
+        </button>
+      </div>
+      <ul className="row-list">
+        {rows.map(({ budget, spent, pct, over, near }) => (
+          <li key={budget.id} className="stacked">
+            <div className="row-main">
+              <div className="row-title">
+                {catLabel(budget.category)}
+                {over && (
+                  <span className="badge late" style={{ marginLeft: 8 }}>
+                    {t.home.budgetsOver}
+                  </span>
+                )}
+                {near && (
+                  <span className="badge waiting" style={{ marginLeft: 8 }}>
+                    {t.home.budgetsNear}
+                  </span>
+                )}
+              </div>
+              <div className="row-sub">
+                {t.home.budgetsLine
+                  .replace("{spent}", fmtMoney(spent, lang))
+                  .replace("{limit}", fmtMoney(budget.amount, lang))
+                  .replace("{category}", catLabel(budget.category))}
+              </div>
+              <div style={{ marginTop: 8 }}>
+                <div
+                  className="goal-bar"
+                  role="progressbar"
+                  aria-valuenow={Math.min(100, pct)}
+                  aria-valuemin={0}
+                  aria-valuemax={100}
+                >
+                  <div
+                    className="goal-fill"
+                    style={{
+                      width: `${Math.min(100, pct)}%`,
+                      background: over ? "var(--red)" : undefined,
+                    }}
+                  />
+                </div>
+              </div>
+            </div>
+          </li>
+        ))}
+      </ul>
+    </div>
+  );
+}
+
+/** Quiet nudge listing products at or below their low-stock number. */
+function LowStockCard({
+  products,
+  go,
+}: {
+  products: Product[];
+  go: (s: Screen) => void;
+}) {
+  const t = useStrings();
+  const low = products.filter((p) => p.quantity <= p.low_threshold);
+  if (low.length === 0) return null;
+  const fmtQty = (n: number) =>
+    Number.isInteger(n) ? String(n) : n.toFixed(2).replace(/\.?0+$/, "");
+
+  return (
+    <div className="panel">
+      <div className="toolbar">
+        <h2 style={{ margin: 0 }}>📦 {t.home.lowStockTitle}</h2>
+        <button type="button" className="btn small" onClick={() => go("inventory")}>
+          {t.home.lowStockViewAll}
+        </button>
+      </div>
+      <ul className="row-list">
+        {low.map((p) => (
+          <li key={p.id}>
+            <div className="row-main">
+              <div className="row-sub">
+                {t.home.lowStockLine
+                  .replace("{name}", p.name)
+                  .replace("{qty}", fmtQty(p.quantity))}
+              </div>
+            </div>
+          </li>
+        ))}
+      </ul>
+    </div>
+  );
+}
+
 /** Nonprofit: 990 deadline reminder, replacing the quarterly tax card. */
 function NfpDeadlineCard() {
   const t = useStrings();
@@ -614,7 +746,7 @@ function NfpDeadlineCard() {
   );
 }
 
-export default function Home({ invoices, expenses, bills, donations, go }: Props) {
+export default function Home({ invoices, expenses, bills, donations, budgets, products, go }: Props) {
   const t = useStrings();
   const lang = useLang();
   const { isNonprofit, accountingMethod } = useBiz();
@@ -682,6 +814,10 @@ export default function Home({ invoices, expenses, bills, donations, go }: Props
       <TaxJarCard invoices={invoices} />
 
       {isNonprofit && <DonationsMonthCard donations={donations} go={go} />}
+
+      <BudgetsCard budgets={budgets} expenses={expenses} go={go} />
+
+      <LowStockCard products={products} go={go} />
 
       <YoYCard invoices={invoices} expenses={expenses} bills={bills} donations={donations} />
 

@@ -14,6 +14,10 @@ import type {
   Loan,
   LoanPayment,
   PayMethod,
+  Budget,
+  Product,
+  PurchaseOrder,
+  PurchaseOrderStatus,
   Quote,
   QuoteStatus,
   Recurrence,
@@ -81,6 +85,15 @@ async function nextQuoteNumber(): Promise<string> {
   return String(next).padStart(4, "0");
 }
 
+/** Sequential purchase-order numbers per business, e.g. "0001". Never repeat. */
+async function nextPurchaseOrderNumber(): Promise<string> {
+  const key = `poSeq:${activeBusinessId ?? 0}`;
+  const cur = parseInt((await getSetting(key)) ?? "0", 10) || 0;
+  const next = cur + 1;
+  await setSetting(key, String(next));
+  return String(next).padStart(4, "0");
+}
+
 function localToday(): string {
   const d = new Date();
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(
@@ -130,6 +143,9 @@ const MONEY_TABLES = [
   "loans",
   "loan_payments",
   "donations",
+  "budgets",
+  "products",
+  "purchase_orders",
 ] as const;
 
 export async function initDb(): Promise<void> {
@@ -289,6 +305,37 @@ export async function initDb(): Promise<void> {
       amount REAL NOT NULL,
       date TEXT NOT NULL,
       campaign TEXT NOT NULL DEFAULT '',
+      created_at TEXT NOT NULL
+    )
+  `);
+  await db.execute(`
+    CREATE TABLE IF NOT EXISTS budgets (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      business_id INTEGER NOT NULL DEFAULT 1,
+      category TEXT NOT NULL,
+      month TEXT NOT NULL,
+      amount REAL NOT NULL,
+      created_at TEXT NOT NULL
+    )
+  `);
+  await db.execute(`
+    CREATE TABLE IF NOT EXISTS products (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      business_id INTEGER NOT NULL DEFAULT 1,
+      name TEXT NOT NULL,
+      quantity REAL NOT NULL DEFAULT 0,
+      low_threshold REAL NOT NULL DEFAULT 0,
+      created_at TEXT NOT NULL
+    )
+  `);
+  await db.execute(`
+    CREATE TABLE IF NOT EXISTS purchase_orders (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      business_id INTEGER NOT NULL DEFAULT 1,
+      number TEXT NOT NULL DEFAULT '',
+      vendor TEXT NOT NULL,
+      amount REAL NOT NULL,
+      status TEXT NOT NULL DEFAULT 'ordered',
       created_at TEXT NOT NULL
     )
   `);
@@ -1047,6 +1094,134 @@ export async function deleteDonation(id: number): Promise<void> {
   await db.execute(`DELETE FROM donations WHERE id = $1 ${bizFilterAnd()}`, [id]);
 }
 
+// ---- budgets: monthly spending limits per category ----
+
+export async function getBudgets(): Promise<Budget[]> {
+  const db = await getDb();
+  return db.select<Budget[]>(
+    `SELECT * FROM budgets ${bizFilter()} ORDER BY month DESC, id ASC`
+  );
+}
+
+export async function upsertBudget(input: {
+  category: string;
+  month: string;
+  amount: number;
+}): Promise<void> {
+  const db = await getDb();
+  const scope = bizFilter();
+  const where = scope
+    ? `${scope} AND category = $1 AND month = $2`
+    : `WHERE category = $1 AND month = $2`;
+  const existing = await db.select<{ id: number }[]>(
+    `SELECT id FROM budgets ${where}`,
+    [input.category, input.month]
+  );
+  if (existing.length > 0) {
+    await db.execute(`UPDATE budgets SET amount = $1 WHERE id = $2 ${bizFilterAnd()}`, [
+      input.amount,
+      existing[0].id,
+    ]);
+  } else {
+    await db.execute(
+      "INSERT INTO budgets (business_id, category, month, amount, created_at) VALUES ($1, $2, $3, $4, $5)",
+      [activeBusinessId, input.category, input.month, input.amount, new Date().toISOString()]
+    );
+  }
+}
+
+export async function deleteBudget(id: number): Promise<void> {
+  const db = await getDb();
+  await db.execute(`DELETE FROM budgets WHERE id = $1 ${bizFilterAnd()}`, [id]);
+}
+
+// ---- products: simple stock counts ----
+
+export async function getProducts(): Promise<Product[]> {
+  const db = await getDb();
+  return db.select<Product[]>(
+    `SELECT * FROM products ${bizFilter()} ORDER BY name ASC, id ASC`
+  );
+}
+
+export async function addProduct(input: {
+  name: string;
+  quantity: number;
+  low_threshold: number;
+}): Promise<void> {
+  const db = await getDb();
+  await db.execute(
+    "INSERT INTO products (business_id, name, quantity, low_threshold, created_at) VALUES ($1, $2, $3, $4, $5)",
+    [activeBusinessId, input.name, input.quantity, input.low_threshold, new Date().toISOString()]
+  );
+}
+
+export async function adjustProduct(id: number, delta: number): Promise<void> {
+  const db = await getDb();
+  await db.execute(
+    `UPDATE products SET quantity = quantity + $1 WHERE id = $2 ${bizFilterAnd()}`,
+    [delta, id]
+  );
+}
+
+export async function updateProduct(
+  id: number,
+  input: { name: string; quantity: number; low_threshold: number }
+): Promise<void> {
+  const db = await getDb();
+  await db.execute(
+    `UPDATE products SET name = $1, quantity = $2, low_threshold = $3 WHERE id = $4 ${bizFilterAnd()}`,
+    [input.name, input.quantity, input.low_threshold, id]
+  );
+}
+
+export async function deleteProduct(id: number): Promise<void> {
+  const db = await getDb();
+  await db.execute(`DELETE FROM products WHERE id = $1 ${bizFilterAnd()}`, [id]);
+}
+
+// ---- purchase orders: simple vendor order tracking ----
+
+export async function getPurchaseOrders(): Promise<PurchaseOrder[]> {
+  const db = await getDb();
+  return db.select<PurchaseOrder[]>(
+    `SELECT * FROM purchase_orders ${bizFilter()} ORDER BY id DESC`
+  );
+}
+
+export async function addPurchaseOrder(input: {
+  vendor: string;
+  amount: number;
+}): Promise<void> {
+  const db = await getDb();
+  await db.execute(
+    "INSERT INTO purchase_orders (business_id, number, vendor, amount, status, created_at) VALUES ($1, $2, $3, $4, 'ordered', $5)",
+    [
+      activeBusinessId,
+      await nextPurchaseOrderNumber(),
+      input.vendor,
+      input.amount,
+      new Date().toISOString(),
+    ]
+  );
+}
+
+export async function setPurchaseOrderStatus(
+  id: number,
+  status: PurchaseOrderStatus
+): Promise<void> {
+  const db = await getDb();
+  await db.execute(`UPDATE purchase_orders SET status = $1 WHERE id = $2 ${bizFilterAnd()}`, [
+    status,
+    id,
+  ]);
+}
+
+export async function deletePurchaseOrder(id: number): Promise<void> {
+  const db = await getDb();
+  await db.execute(`DELETE FROM purchase_orders WHERE id = $1 ${bizFilterAnd()}`, [id]);
+}
+
 // ---- full export (unfiltered) for backups ----
 
 export interface AllData {
@@ -1063,11 +1238,14 @@ export interface AllData {
   loans: Loan[];
   loanPayments: LoanPayment[];
   donations: Donation[];
+  budgets: Budget[];
+  products: Product[];
+  purchaseOrders: PurchaseOrder[];
 }
 
 export async function exportAllData(): Promise<AllData> {
   const db = await getDb();
-  const [businesses, invoices, expenses, bills, quotes, contractors, contractorPayments, services, timeEntries, trips, loans, loanPayments, donations] =
+  const [businesses, invoices, expenses, bills, quotes, contractors, contractorPayments, services, timeEntries, trips, loans, loanPayments, donations, budgets, products, purchaseOrders] =
     await Promise.all([
       db.select<Business[]>("SELECT * FROM businesses ORDER BY id ASC"),
       db.select<Invoice[]>("SELECT * FROM invoices ORDER BY id ASC"),
@@ -1082,8 +1260,11 @@ export async function exportAllData(): Promise<AllData> {
       db.select<Loan[]>("SELECT * FROM loans ORDER BY id ASC"),
       db.select<LoanPayment[]>("SELECT * FROM loan_payments ORDER BY id ASC"),
       db.select<Donation[]>("SELECT * FROM donations ORDER BY id ASC"),
+      db.select<Budget[]>("SELECT * FROM budgets ORDER BY id ASC"),
+      db.select<Product[]>("SELECT * FROM products ORDER BY id ASC"),
+      db.select<PurchaseOrder[]>("SELECT * FROM purchase_orders ORDER BY id ASC"),
     ]);
-  return { businesses, invoices, expenses, bills, quotes, contractors, contractorPayments, services, timeEntries, trips, loans, loanPayments, donations };
+  return { businesses, invoices, expenses, bills, quotes, contractors, contractorPayments, services, timeEntries, trips, loans, loanPayments, donations, budgets, products, purchaseOrders };
 }
 
 // ---- backup / restore ----
@@ -1312,6 +1493,30 @@ export async function importBackup(data: BackupData): Promise<void> {
       );
     }
   }
+  if (Array.isArray(data.budgets)) {
+    for (const b of data.budgets) {
+      await db.execute(
+        "INSERT INTO budgets (id, business_id, category, month, amount, created_at) VALUES ($1, $2, $3, $4, $5, $6)",
+        [b.id, mapBiz(b.business_id), b.category, b.month, b.amount, b.created_at]
+      );
+    }
+  }
+  if (Array.isArray(data.products)) {
+    for (const p of data.products) {
+      await db.execute(
+        "INSERT INTO products (id, business_id, name, quantity, low_threshold, created_at) VALUES ($1, $2, $3, $4, $5, $6)",
+        [p.id, mapBiz(p.business_id), p.name, p.quantity, p.low_threshold ?? 0, p.created_at]
+      );
+    }
+  }
+  if (Array.isArray(data.purchaseOrders)) {
+    for (const po of data.purchaseOrders) {
+      await db.execute(
+        "INSERT INTO purchase_orders (id, business_id, number, vendor, amount, status, created_at) VALUES ($1, $2, $3, $4, $5, $6, $7)",
+        [po.id, mapBiz(po.business_id), po.number ?? "", po.vendor, po.amount, po.status ?? "ordered", po.created_at]
+      );
+    }
+  }
 
   // Keep AUTOINCREMENT counters ahead of restored ids.
   for (const t of [...MONEY_TABLES, "businesses"] as const) {
@@ -1333,6 +1538,11 @@ export async function importBackup(data: BackupData): Promise<void> {
       [b.id]
     );
     await setSetting(`quoteSeq:${b.id}`, String(maxQ[0].m ?? 0));
+    const maxPo = await db.select<{ m: number | null }[]>(
+      "SELECT MAX(CAST(number AS INTEGER)) AS m FROM purchase_orders WHERE business_id = $1",
+      [b.id]
+    );
+    await setSetting(`poSeq:${b.id}`, String(maxPo[0].m ?? 0));
   }
 
   // Backups made before invoice numbers existed carry number = ''.
@@ -1355,5 +1565,15 @@ export async function importBackup(data: BackupData): Promise<void> {
     const num = await nextQuoteNumber();
     activeBusinessId = prev;
     await db.execute("UPDATE quotes SET number = $1 WHERE id = $2", [num, row.id]);
+  }
+  const unnumberedPos = await db.select<{ id: number; business_id: number }[]>(
+    "SELECT id, business_id FROM purchase_orders WHERE number = '' ORDER BY id ASC"
+  );
+  for (const row of unnumberedPos) {
+    const prev = activeBusinessId;
+    activeBusinessId = row.business_id;
+    const num = await nextPurchaseOrderNumber();
+    activeBusinessId = prev;
+    await db.execute("UPDATE purchase_orders SET number = $1 WHERE id = $2", [num, row.id]);
   }
 }

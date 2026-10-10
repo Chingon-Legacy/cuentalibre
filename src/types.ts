@@ -15,7 +15,10 @@ export type Screen =
   | "contractors"
   | "loans"
   | "donations"
-  | "donors";
+  | "donors"
+  | "budgets"
+  | "inventory"
+  | "purchaseorders";
 
 export type InvoiceStatus = "waiting" | "paid";
 
@@ -182,6 +185,39 @@ export interface Donation {
   created_at: string;
 }
 
+/** A monthly spending limit for one expense category. */
+export interface Budget {
+  id: number;
+  business_id: number;
+  category: string;
+  month: string; // YYYY-MM
+  amount: number; // spending limit
+  created_at: string;
+}
+
+/** A simple stock count for something the business sells or uses. */
+export interface Product {
+  id: number;
+  business_id: number;
+  name: string;
+  quantity: number;
+  low_threshold: number; // nudge when quantity is at or below this
+  created_at: string;
+}
+
+export type PurchaseOrderStatus = "ordered" | "received";
+
+/** A simple tracker for orders placed with vendors. */
+export interface PurchaseOrder {
+  id: number;
+  business_id: number;
+  number: string; // sequential, e.g. "0001"
+  vendor: string;
+  amount: number;
+  status: PurchaseOrderStatus;
+  created_at: string;
+}
+
 export interface BackupData {
   app: "cuentalibre";
   version: 2;
@@ -203,4 +239,7 @@ export interface BackupData {
   loans?: Loan[];
   loanPayments?: LoanPayment[];
   donations?: Donation[];
+  budgets?: Budget[];
+  products?: Product[];
+  purchaseOrders?: PurchaseOrder[];
 }

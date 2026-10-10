@@ -12,6 +12,7 @@ import {
   addBusiness,
   deleteBusiness,
   getBills,
+  getBudgets,
   getBusinesses,
   getContractorPayments,
   getContractors,
@@ -20,6 +21,8 @@ import {
   getLoanPayments,
   getExpenses,
   getInvoices,
+  getProducts,
+  getPurchaseOrders,
   getQuotes,
   getServices,
   getSetting,
@@ -39,6 +42,7 @@ import type { CategoryPack } from "./data/categories/types";
 import type {
   AccountingMethod,
   Bill,
+  Budget,
   Business,
   Contractor,
   ContractorPayment,
@@ -49,6 +53,8 @@ import type {
   Lang,
   Loan,
   LoanPayment,
+  Product,
+  PurchaseOrder,
   Quote,
   Screen,
   Service,
@@ -72,6 +78,9 @@ import Mileage from "./screens/Mileage";
 import Customers from "./screens/Customers";
 import Contractors from "./screens/Contractors";
 import Loans from "./screens/Loans";
+import Budgets from "./screens/Budgets";
+import Inventory from "./screens/Inventory";
+import PurchaseOrders from "./screens/PurchaseOrders";
 import Donations from "./screens/Donations";
 import Donors from "./screens/Donors";
 import Reports from "./screens/Reports";
@@ -175,6 +184,9 @@ const NAV_ITEMS: {
   { id: "donors", icon: "🙏", label: (t) => t.nav.donors, nonprofitOnly: true },
   { id: "contractors", icon: "🤝", label: (t) => t.nav.contractors },
   { id: "loans", icon: "🏦", label: (t) => t.nav.loans },
+  { id: "budgets", icon: "💰", label: (t) => t.nav.budgets },
+  { id: "inventory", icon: "📦", label: (t) => t.nav.inventory },
+  { id: "purchaseorders", icon: "🧾", label: (t) => t.nav.purchaseorders },
   { id: "reports", icon: "📊", label: (t) => t.nav.reports },
   { id: "settings", icon: "⚙️", label: (t) => t.nav.settings },
 ];
@@ -262,6 +274,9 @@ interface AppData {
   timeEntries: TimeEntry[];
   trips: Trip[];
   donations: Donation[];
+  budgets: Budget[];
+  products: Product[];
+  purchaseOrders: PurchaseOrder[];
 }
 
 const EMPTY_DATA: AppData = {
@@ -277,6 +292,9 @@ const EMPTY_DATA: AppData = {
   timeEntries: [],
   trips: [],
   donations: [],
+  budgets: [],
+  products: [],
+  purchaseOrders: [],
 };
 
 function Shell({
@@ -474,6 +492,8 @@ function Shell({
             expenses={data.expenses}
             bills={data.bills}
             donations={data.donations}
+            budgets={data.budgets}
+            products={data.products}
             go={setScreen}
           />
         )}
@@ -513,6 +533,15 @@ function Shell({
         {ready && screen === "loans" && (
           <Loans loans={data.loans} payments={data.loanPayments} refresh={refresh} />
         )}
+        {ready && screen === "budgets" && (
+          <Budgets budgets={data.budgets} expenses={data.expenses} refresh={refresh} />
+        )}
+        {ready && screen === "inventory" && (
+          <Inventory products={data.products} refresh={refresh} />
+        )}
+        {ready && screen === "purchaseorders" && (
+          <PurchaseOrders orders={data.purchaseOrders} refresh={refresh} />
+        )}
         {ready && screen === "reports" && (
           <Reports
             invoices={data.invoices}
@@ -522,6 +551,8 @@ function Shell({
             contractorPayments={data.contractorPayments}
             trips={data.trips}
             donations={data.donations}
+            loans={data.loans}
+            loanPayments={data.loanPayments}
           />
         )}
         {ready && screen === "settings" && <Settings refresh={refresh} />}
@@ -608,7 +639,7 @@ export default function App() {
 
   /** Reloads every money list for the active business. */
   const refreshData = useCallback(async (): Promise<AppData> => {
-    const [invoices, expenses, bills, quotes, contractors, contractorPayments, services, timeEntries, trips, loans, loanPayments, donations] =
+    const [invoices, expenses, bills, quotes, contractors, contractorPayments, services, timeEntries, trips, loans, loanPayments, donations, budgets, products, purchaseOrders] =
       await Promise.all([
         getInvoices(),
         getExpenses(),
@@ -622,8 +653,11 @@ export default function App() {
         getLoans(),
         getLoanPayments(),
         getDonations(),
+        getBudgets(),
+        getProducts(),
+        getPurchaseOrders(),
       ]);
-    const next = { invoices, expenses, bills, quotes, contractors, contractorPayments, services, timeEntries, trips, loans, loanPayments, donations };
+    const next = { invoices, expenses, bills, quotes, contractors, contractorPayments, services, timeEntries, trips, loans, loanPayments, donations, budgets, products, purchaseOrders };
     setData(next);
     return next;
   }, []);
