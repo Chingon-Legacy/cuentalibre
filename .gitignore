@@ -1,0 +1,19 @@
+# Dependencies
+node_modules/
+
+# Build output
+dist/
+dist-ssr/
+*.local
+*.log
+
+# macOS
+.DS_Store
+
+# Tauri build artifacts
+src-tauri/target/
+src-tauri/gen/
+
+# Environment variables
+.env
+.env.*
