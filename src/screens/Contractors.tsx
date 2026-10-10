@@ -116,6 +116,7 @@ export default function Contractors({ contractors, payments, refresh }: Props) {
       <div className="toolbar">
         <div>
           <h1 style={{ margin: 0 }}>🤝 {t.contractors.title}</h1>
+          <p className="subtitle">{t.contractors.subtitle}</p>
         </div>
         <button type="button" className="btn" onClick={() => setShowAdd(!showAdd)}>
           {t.contractors.new}

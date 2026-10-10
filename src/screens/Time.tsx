@@ -134,7 +134,10 @@ export default function Time({ entries, services, refresh }: Props) {
   return (
     <div className="page">
       <div className="toolbar">
-        <h1 style={{ margin: 0 }}>⏱️ {t.time.title}</h1>
+        <div>
+          <h1 style={{ margin: 0 }}>⏱️ {t.time.title}</h1>
+          <p className="subtitle">{t.time.subtitle}</p>
+        </div>
         <button type="button" className="btn" onClick={() => setShowForm(true)}>
           {t.time.new}
         </button>

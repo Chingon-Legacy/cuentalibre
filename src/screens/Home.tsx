@@ -408,7 +408,7 @@ function TaxJarCard({ invoices }: { invoices: Invoice[] }) {
               .replace("{money}", fmtMoney(income, lang))
               .replace("{pct}", String(pct))}
           </p>
-          <p className="row-sub" style={{ margin: 0, fontSize: 13 }}>
+          <p className="row-sub" style={{ margin: 0 }}>
             {t.taxjar.note}
           </p>
         </>
@@ -736,7 +736,7 @@ export default function Home({ invoices, expenses, bills, donations, go }: Props
                     <div className="row-title">{e.description}</div>
                     <div className="row-sub">{fmtDate(e.date, lang)}</div>
                   </div>
-                  <span className="row-amount negative">-{fmtMoney(e.amount, lang)}</span>
+                  <span className="row-amount negative">{fmtMoney(-e.amount, lang)}</span>
                 </li>
               ))}
             </ul>

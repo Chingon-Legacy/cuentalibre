@@ -58,7 +58,10 @@ export default function Services({ services, refresh }: Props) {
   return (
     <div className="page">
       <div className="toolbar">
-        <h1 style={{ margin: 0 }}>🏷️ {t.services.title}</h1>
+        <div>
+          <h1 style={{ margin: 0 }}>🏷️ {t.services.title}</h1>
+          <p className="subtitle">{t.services.subtitle}</p>
+        </div>
         <button type="button" className="btn" onClick={startCreate}>
           {t.services.new}
         </button>

@@ -499,7 +499,7 @@ export default function Expenses({ expenses, refresh }: Props) {
                     {catLabel(e.category)} · {fmtDate(e.date, lang)}
                   </div>
                 </div>
-                <span className="row-amount negative">-{fmtMoney(e.amount, lang)}</span>
+                <span className="row-amount negative">{fmtMoney(-e.amount, lang)}</span>
                 <button
                   type="button"
                   className="btn small secondary"

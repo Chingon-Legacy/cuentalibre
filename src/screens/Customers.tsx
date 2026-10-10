@@ -106,31 +106,43 @@ function StatementModal({
           {list.length === 0 ? (
             <p>{t.statement.noInvoices}</p>
           ) : (
-            <table className="report invoice-table">
-              <thead>
-                <tr>
-                  <th>{t.statement.invoice}</th>
-                  <th>{t.statement.date}</th>
-                  <th className="num">{t.statement.amount}</th>
-                  <th>{t.statement.status}</th>
-                </tr>
-              </thead>
-              <tbody>
-                {list.map((inv) => (
-                  <tr key={inv.id}>
-                    <td>#{inv.number || "—"}</td>
-                    <td>{fmtDate(inv.due_date, lang)}</td>
-                    <td className="num">{fmtMoney(invoiceTotal(inv), lang)}</td>
-                    <td>{badge(inv)}</td>
+            <div className="table-scroll">
+              <table className="report invoice-table responsive-table">
+                <thead>
+                  <tr>
+                    <th>{t.statement.invoice}</th>
+                    <th>{t.statement.date}</th>
+                    <th className="num">{t.statement.amount}</th>
+                    <th>{t.statement.status}</th>
                   </tr>
-                ))}
-                <tr className="total">
-                  <td colSpan={2}>{t.statement.totalOwed}</td>
-                  <td className="num">{fmtMoney(totalOwed, lang)}</td>
-                  <td />
-                </tr>
-              </tbody>
-            </table>
+                </thead>
+                <tbody>
+                  {list.map((inv) => (
+                    <tr key={inv.id}>
+                      <td data-label={t.statement.invoice}>
+                        #{inv.number || "—"}
+                      </td>
+                      <td data-label={t.statement.date}>
+                        {fmtDate(inv.due_date, lang)}
+                      </td>
+                      <td className="num" data-label={t.statement.amount}>
+                        {fmtMoney(invoiceTotal(inv), lang)}
+                      </td>
+                      <td data-label={t.statement.status}>{badge(inv)}</td>
+                    </tr>
+                  ))}
+                  <tr className="total">
+                    <td colSpan={2} data-label={t.statement.totalOwed}>
+                      {t.statement.totalOwed}
+                    </td>
+                    <td className="num" data-label={t.statement.amount}>
+                      {fmtMoney(totalOwed, lang)}
+                    </td>
+                    <td data-label={t.statement.status} />
+                  </tr>
+                </tbody>
+              </table>
+            </div>
           )}
 
           <div className="form-actions no-print">
@@ -178,7 +190,7 @@ export default function Customers({ invoices }: Props) {
   return (
     <div className="page">
       <h1>👥 {t.customers.title}</h1>
-      <p className="subtitle">&nbsp;</p>
+      <p className="subtitle">{t.customers.subtitle}</p>
 
       <div className="panel">
         {rows.length === 0 ? (

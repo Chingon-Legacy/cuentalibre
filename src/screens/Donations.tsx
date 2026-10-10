@@ -30,36 +30,56 @@ function ReceiptModal({ d, onClose }: { d: Donation; onClose: () => void }) {
             </div>
           </div>
 
-          <table className="report invoice-table">
-            <tbody>
-              <tr>
-                <td className="label">{t.receipt.orgLine}</td>
-                <td className="value">{bizName || "CuentaLibre"}</td>
-              </tr>
-              {active?.ein && (
+          <div className="table-scroll">
+            <table className="report invoice-table responsive-table">
+              <tbody>
                 <tr>
-                  <td className="label">{t.receipt.einLine}</td>
-                  <td className="value">{active.ein}</td>
+                  <td className="label" data-label={t.receipt.orgLine}>
+                    {t.receipt.orgLine}
+                  </td>
+                  <td className="value" data-label={t.receipt.orgLine}>
+                    {bizName || "CuentaLibre"}
+                  </td>
                 </tr>
-              )}
-              <tr>
-                <td className="label">{t.receipt.donorLine}</td>
-                <td className="value">{d.donor}</td>
-              </tr>
-              <tr>
-                <td className="label">{t.receipt.amountLine}</td>
-                <td className="value num">
-                  <strong>{fmtMoney(d.amount, lang)}</strong>
-                </td>
-              </tr>
-              {d.campaign && (
+                {active?.ein && (
+                  <tr>
+                    <td className="label" data-label={t.receipt.einLine}>
+                      {t.receipt.einLine}
+                    </td>
+                    <td className="value" data-label={t.receipt.einLine}>
+                      {active.ein}
+                    </td>
+                  </tr>
+                )}
                 <tr>
-                  <td className="label">{t.receipt.campaignLine}</td>
-                  <td className="value">{d.campaign}</td>
+                  <td className="label" data-label={t.receipt.donorLine}>
+                    {t.receipt.donorLine}
+                  </td>
+                  <td className="value" data-label={t.receipt.donorLine}>
+                    {d.donor}
+                  </td>
                 </tr>
-              )}
-            </tbody>
-          </table>
+                <tr>
+                  <td className="label" data-label={t.receipt.amountLine}>
+                    {t.receipt.amountLine}
+                  </td>
+                  <td className="value num" data-label={t.receipt.amountLine}>
+                    <strong>{fmtMoney(d.amount, lang)}</strong>
+                  </td>
+                </tr>
+                {d.campaign && (
+                  <tr>
+                    <td className="label" data-label={t.receipt.campaignLine}>
+                      {t.receipt.campaignLine}
+                    </td>
+                    <td className="value" data-label={t.receipt.campaignLine}>
+                      {d.campaign}
+                    </td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
+          </div>
 
           <p className="tax-why" style={{ marginTop: 16 }}>
             {t.receipt.noGoods}
@@ -142,7 +162,7 @@ export default function Donations({ donations, refresh }: Props) {
           ＋ {t.donations.new}
         </button>
       </div>
-      <p className="subtitle">&nbsp;</p>
+      <p className="subtitle">{t.donations.subtitle}</p>
 
       <div className="panel">
         {donations.length === 0 ? (
@@ -150,6 +170,8 @@ export default function Donations({ donations, refresh }: Props) {
             icon="❤️"
             title={t.donations.emptyTitle}
             body={t.donations.emptyBody}
+            actionLabel={t.donations.new}
+            onAction={startCreate}
           />
         ) : (
           <ul className="row-list">

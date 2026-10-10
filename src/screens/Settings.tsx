@@ -226,7 +226,7 @@ export default function Settings({ refresh }: { refresh: () => Promise<void> }) 
   return (
     <div className="page">
       <h1>⚙️ {t.settings.title}</h1>
-      <p className="subtitle">&nbsp;</p>
+      <p className="subtitle">{t.settings.subtitle}</p>
 
       <div className="panel">
         <div className="settings-row">
@@ -399,7 +399,7 @@ export default function Settings({ refresh }: { refresh: () => Promise<void> }) 
               </div>
             </div>
 
-            {nfpSaved && <p className="tax-note">✓</p>}
+            {nfpSaved && <p className="status-note">✓ {t.settings.nonprofitSaved}</p>}
           </>
         )}
 

@@ -86,6 +86,7 @@ export default function Mileage({ trips, refresh }: Props) {
       <div className="toolbar">
         <div>
           <h1 style={{ margin: 0 }}>🚗 {t.mileage.title}</h1>
+          <p className="subtitle">{t.mileage.subtitle}</p>
         </div>
         <div style={{ display: "flex", gap: 8 }}>
           <button

@@ -102,6 +102,7 @@ export default function Loans({ loans, payments, refresh }: Props) {
   };
 
   const removePayment = async (id: number) => {
+    if (!window.confirm(t.loans.confirmDeletePayment)) return;
     await deleteLoanPayment(id);
     await refresh();
   };
@@ -111,6 +112,7 @@ export default function Loans({ loans, payments, refresh }: Props) {
       <div className="toolbar">
         <div>
           <h1 style={{ margin: 0 }}>🏦 {t.loans.title}</h1>
+          <p className="subtitle">{t.loans.subtitle}</p>
         </div>
         <button type="button" className="btn" onClick={() => setShowAdd(!showAdd)}>
           {t.loans.new}
@@ -199,11 +201,16 @@ export default function Loans({ loans, payments, refresh }: Props) {
                     aria-expanded={open}
                     aria-label={l.name}
                     style={{
-                      all: "unset",
+                      textAlign: "left",
                       display: "block",
                       width: "100%",
+                      background: "transparent",
+                      border: "none",
+                      padding: "12px 4px",
                       cursor: "pointer",
                       boxSizing: "border-box",
+                      font: "inherit",
+                      color: "inherit",
                     }}
                   >
                     <div className="row-main">

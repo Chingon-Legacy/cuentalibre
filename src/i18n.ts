@@ -105,6 +105,7 @@ const en = {
 
   invoices: {
     title: "Invoices",
+    subtitle: "Get paid on time, every time.",
     new: "New invoice",
     customer: "Customer",
     customerPh: "e.g. Maria's Bakery",
@@ -155,6 +156,7 @@ const en = {
 
   expenses: {
     title: "Expenses",
+    subtitle: "Know exactly where your money goes.",
     add: "Add expense",
     description: "What was it?",
     descriptionPh: "e.g. Flour and sugar",
@@ -184,6 +186,7 @@ const en = {
 
   customers: {
     title: "Customers",
+    subtitle: "Everyone you invoice, in one place.",
     billed: "Total billed",
     paid: "Paid",
     owes: "Still owes",
@@ -199,6 +202,7 @@ const en = {
 
   bills: {
     title: "Bills you owe",
+    subtitle: "Stay ahead of what you owe.",
     new: "New bill",
     payee: "Pay to",
     payeePh: "e.g. Electric company",
@@ -222,11 +226,12 @@ const en = {
     emptyBody:
       "Bills are payments you owe — rent, utilities, suppliers. Add them with their due dates and we'll remind you before they're late.",
     totalOwed: "Total you owe",
-    paidNote: "Marking paid also adds it to your expenses.",
+    paidNote: "Paid bills show up in your expenses too.",
   },
 
   quotes: {
     title: "Quotes",
+    subtitle: "Win the job before you start.",
     new: "New quote",
     number: "Quote #",
     customer: "Customer",
@@ -259,6 +264,7 @@ const en = {
 
   contractors: {
     title: "Contractors",
+    subtitle: "Keep track of everyone who helps you.",
     new: "Add contractor",
     name: "Name",
     namePh: "e.g. Juan Pérez",
@@ -281,7 +287,7 @@ const en = {
     save: "Save",
     deletePayment: "Delete",
     confirmDeletePayment: "Delete this payment?",
-    noPayments: "No payments logged yet.",
+    noPayments: "No payments logged yet — add the first one above.",
     year: "Year",
     totalYear: "Total paid",
     exportCsv: "Download summary",
@@ -357,6 +363,7 @@ const en = {
 
   settings: {
     title: "Settings",
+    subtitle: "Make CuentaLibre yours.",
     language: "Language",
     businessType: "Business type",
     businessName: "Business name",
@@ -376,6 +383,7 @@ const en = {
       "CuentaLibre is not a tax professional. Tax rates change — verify your state and local rates with a tax preparer.",
     version: "Version",
     saved: "Work saved to your computer.",
+    nonprofitSaved: "Saved",
     restored: "Backup restored.",
     restoreFailed: "That file doesn't look like a CuentaLibre backup.",
     confirmRestore:
@@ -560,6 +568,7 @@ const en = {
 
   services: {
     title: "Services",
+    subtitle: "Your price list, ready to invoice.",
     new: "New service",
     name: "Service name",
     namePh: "e.g. Haircut",
@@ -571,13 +580,14 @@ const en = {
     confirmDelete: "Delete this service?",
     cancel: "Cancel",
     pick: "Pick a service…",
-    emptyTitle: "No services yet",
+    emptyTitle: "What do you sell?",
     emptyBody:
       "Save what you sell with its price. Then tap one to fill an invoice in a second.",
   },
 
   time: {
     title: "Time",
+    subtitle: "Your hours are worth money.",
     new: "Log hours",
     customer: "Customer",
     customerPh: "Who did you work for?",
@@ -604,6 +614,7 @@ const en = {
 
   mileage: {
     title: "Mileage",
+    subtitle: "Every mile counts.",
     new: "Log a trip",
     date: "Date",
     miles: "Miles",
@@ -660,7 +671,7 @@ const en = {
     expensesUp: "Expenses are up {pct}% vs last year",
     expensesDown: "Expenses are down {pct}% vs last year",
     expensesSame: "Expenses are about the same as last year",
-    ytdNote: "Year to date, through {date}",
+    ytdNote: "So far this year, through {date}",
   },
 
   statement: {
@@ -693,6 +704,7 @@ const en = {
 
   loans: {
     title: "Loans",
+    subtitle: "Borrowed money, under control.",
     new: "Add loan",
     name: "Loan name",
     namePh: "e.g. Truck loan",
@@ -706,6 +718,7 @@ const en = {
     paymentDate: "Payment date",
     delete: "Delete",
     confirmDelete: "Delete this loan and all its payments?",
+    confirmDeletePayment: "Delete this payment?",
     emptyTitle: "No loans yet",
     emptyBody:
       "Track money you borrowed here — log payments and watch the balance shrink.",
@@ -717,6 +730,7 @@ const en = {
 
   donations: {
     title: "Donations",
+    subtitle: "Every gift, gratefully tracked.",
     new: "Add donation",
     donor: "Donor",
     donorPh: "e.g. Maria Garcia",
@@ -738,6 +752,7 @@ const en = {
 
   donors: {
     title: "Donors",
+    subtitle: "The people who believe in your mission.",
     emptyTitle: "No donors yet",
     emptyBody:
       "Everyone who has donated shows up here, with their totals by year.",
@@ -807,7 +822,7 @@ const en = {
     cReceipts: "Confirm gross receipts were $50,000 or less",
     cNotTerminated: "State the organization has not terminated",
     cOfficer: "Principal officer name",
-    toFill: "TO FILL",
+    toFill: "Needed",
     howTitle: "How to file on the IRS website",
     howSub:
       "CuentaLibre prepares your numbers — only the IRS website can accept the filing. Nothing is filed from this app.",
@@ -934,6 +949,7 @@ const es: typeof en = {
 
   invoices: {
     title: "Facturas",
+    subtitle: "Cobra a tiempo, siempre.",
     new: "Nueva factura",
     customer: "Cliente",
     customerPh: "p. ej. Panadería de María",
@@ -984,6 +1000,7 @@ const es: typeof en = {
 
   expenses: {
     title: "Gastos",
+    subtitle: "Sabe exactamente a dónde va tu dinero.",
     add: "Agregar gasto",
     description: "¿En qué fue?",
     descriptionPh: "p. ej. Harina y azúcar",
@@ -1013,6 +1030,7 @@ const es: typeof en = {
 
   customers: {
     title: "Clientes",
+    subtitle: "Todos tus clientes, en un lugar.",
     billed: "Total facturado",
     paid: "Pagado",
     owes: "Aún debe",
@@ -1028,6 +1046,7 @@ const es: typeof en = {
 
   bills: {
     title: "Cuentas que debes pagar",
+    subtitle: "Mantente al día con lo que debes.",
     new: "Nueva cuenta",
     payee: "Pagar a",
     payeePh: "p. ej. Compañía de luz",
@@ -1051,11 +1070,12 @@ const es: typeof en = {
     emptyBody:
       "Las cuentas son pagos que debes — renta, luz, proveedores. Agrégalas con sus fechas de vencimiento y te avisaremos antes de que se atrasen.",
     totalOwed: "Total que debes",
-    paidNote: "Al marcarla pagada también se agrega a tus gastos.",
+    paidNote: "Las cuentas pagadas también aparecen en tus gastos.",
   },
 
   quotes: {
     title: "Cotizaciones",
+    subtitle: "Gana el trabajo antes de empezar.",
     new: "Nueva cotización",
     number: "Cotización n.º",
     customer: "Cliente",
@@ -1088,6 +1108,7 @@ const es: typeof en = {
 
   contractors: {
     title: "Contratistas",
+    subtitle: "Lleva la cuenta de todos los que te ayudan.",
     new: "Agregar contratista",
     name: "Nombre",
     namePh: "p. ej. Juan Pérez",
@@ -1110,7 +1131,7 @@ const es: typeof en = {
     save: "Guardar",
     deletePayment: "Borrar",
     confirmDeletePayment: "¿Borrar este pago?",
-    noPayments: "Aún no hay pagos registrados.",
+    noPayments: "Aún no hay pagos — agrega el primero arriba.",
     year: "Año",
     totalYear: "Total pagado",
     exportCsv: "Descargar resumen",
@@ -1186,6 +1207,7 @@ const es: typeof en = {
 
   settings: {
     title: "Ajustes",
+    subtitle: "Haz CuentaLibre a tu medida.",
     language: "Idioma",
     businessType: "Tipo de negocio",
     businessName: "Nombre del negocio",
@@ -1205,6 +1227,7 @@ const es: typeof en = {
       "CuentaLibre no es un profesional de impuestos. Las tasas cambian — verifica tus tasas estatales y locales con un preparador.",
     version: "Versión",
     saved: "Respaldo guardado en tu computadora.",
+    nonprofitSaved: "Guardado",
     restored: "Respaldo restaurado.",
     restoreFailed: "Ese archivo no parece un respaldo de CuentaLibre.",
     confirmRestore:
@@ -1389,6 +1412,7 @@ const es: typeof en = {
 
   services: {
     title: "Servicios",
+    subtitle: "Tu lista de precios, lista para facturar.",
     new: "Nuevo servicio",
     name: "Nombre del servicio",
     namePh: "p. ej. Corte de pelo",
@@ -1400,13 +1424,14 @@ const es: typeof en = {
     confirmDelete: "¿Eliminar este servicio?",
     cancel: "Cancelar",
     pick: "Elige un servicio…",
-    emptyTitle: "Aún no hay servicios",
+    emptyTitle: "¿Qué vendes?",
     emptyBody:
       "Guarda lo que vendes con su precio. Luego toca uno para llenar una factura en un segundo.",
   },
 
   time: {
     title: "Horas",
+    subtitle: "Tus horas valen dinero.",
     new: "Registrar horas",
     customer: "Cliente",
     customerPh: "¿Para quién trabajaste?",
@@ -1433,6 +1458,7 @@ const es: typeof en = {
 
   mileage: {
     title: "Millaje",
+    subtitle: "Cada milla cuenta.",
     new: "Registrar un viaje",
     date: "Fecha",
     miles: "Millas",
@@ -1489,7 +1515,7 @@ const es: typeof en = {
     expensesUp: "Los gastos subieron {pct}% vs el año pasado",
     expensesDown: "Los gastos bajaron {pct}% vs el año pasado",
     expensesSame: "Los gastos están parecidos al año pasado",
-    ytdNote: "En lo que va del año, hasta {date}",
+    ytdNote: "En lo que va del año, hasta el {date}",
   },
 
   statement: {
@@ -1522,6 +1548,7 @@ const es: typeof en = {
 
   loans: {
     title: "Préstamos",
+    subtitle: "Dinero prestado, bajo control.",
     new: "Agregar préstamo",
     name: "Nombre del préstamo",
     namePh: "p. ej. Préstamo de la camioneta",
@@ -1535,6 +1562,7 @@ const es: typeof en = {
     paymentDate: "Fecha del pago",
     delete: "Borrar",
     confirmDelete: "¿Borrar este préstamo y todos sus pagos?",
+    confirmDeletePayment: "¿Borrar este pago?",
     emptyTitle: "Aún no hay préstamos",
     emptyBody:
       "Lleva aquí el dinero que pediste prestado — registra pagos y mira cómo baja el saldo.",
@@ -1546,6 +1574,7 @@ const es: typeof en = {
 
   donations: {
     title: "Donaciones",
+    subtitle: "Cada donación, registrada con gratitud.",
     new: "Agregar donación",
     donor: "Donante",
     donorPh: "p. ej. María García",
@@ -1567,6 +1596,7 @@ const es: typeof en = {
 
   donors: {
     title: "Donantes",
+    subtitle: "Las personas que creen en tu misión.",
     emptyTitle: "Aún no hay donantes",
     emptyBody:
       "Aquí aparecen todas las personas que han donado, con sus totales por año.",
@@ -1636,7 +1666,7 @@ const es: typeof en = {
     cReceipts: "Confirma que los ingresos brutos fueron $50,000 o menos",
     cNotTerminated: "Declara que la organización no ha terminado",
     cOfficer: "Nombre del oficial principal",
-    toFill: "POR COMPLETAR",
+    toFill: "Falta",
     howTitle: "Cómo presentarlo en el sitio del IRS",
     howSub:
       "CuentaLibre prepara tus números — solo el sitio web del IRS puede aceptar la presentación. Nada se presenta desde esta app.",

@@ -100,6 +100,7 @@ export default function Bills({ bills, refresh }: Props) {
       <div className="toolbar">
         <div>
           <h1 style={{ margin: 0 }}>📄 {t.bills.title}</h1>
+          <p className="subtitle">{t.bills.subtitle}</p>
           {totalOwed > 0 && (
             <div className="row-sub" style={{ marginTop: 4 }}>
               {t.bills.totalOwed}:{" "}

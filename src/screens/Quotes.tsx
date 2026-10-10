@@ -122,6 +122,7 @@ export default function Quotes({ quotes, services, refresh }: Props) {
       <div className="toolbar">
         <div>
           <h1 style={{ margin: 0 }}>📝 {t.quotes.title}</h1>
+          <p className="subtitle">{t.quotes.subtitle}</p>
         </div>
         <button type="button" className="btn" onClick={startCreate}>
           {t.quotes.new}

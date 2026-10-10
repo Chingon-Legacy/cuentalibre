@@ -50,7 +50,7 @@ export default function Donors({ donations }: Props) {
   return (
     <div className="page">
       <h1>🙏 {t.donors.title}</h1>
-      <p className="subtitle">&nbsp;</p>
+      <p className="subtitle">{t.donors.subtitle}</p>
 
       <div className="panel">
         {rows.length === 0 ? (

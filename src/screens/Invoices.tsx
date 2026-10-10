@@ -345,6 +345,7 @@ export default function Invoices({ invoices, services, refresh }: Props) {
       <div className="toolbar">
         <div>
           <h1 style={{ margin: 0 }}>🧾 {t.invoices.title}</h1>
+          <p className="subtitle">{t.invoices.subtitle}</p>
         </div>
         <button type="button" className="btn" onClick={startCreate}>
           {t.invoices.new}
