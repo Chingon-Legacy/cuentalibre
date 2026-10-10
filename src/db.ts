@@ -26,13 +26,8 @@ let dbPromise: Promise<Database> | null = null;
 
 function getDb(): Promise<Database> {
   if (!dbPromise) {
-    // TEMP-QA-MOCK (revert after QA): in a plain browser there is no Tauri
-    // SQL plugin, so use an in-memory sql.js database.
-    dbPromise = (async () => {
-      const { isTauri, getBrowserDb } = await import("./shot-mock");
-      if (!isTauri()) return (await getBrowserDb()) as unknown as Database;
-      return Database.load("sqlite:cuentalibre.db");
-    })();
+    // Stored in the app's local data folder on the user's computer.
+    dbPromise = Database.load("sqlite:cuentalibre.db");
   }
   return dbPromise;
 }

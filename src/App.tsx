@@ -632,9 +632,6 @@ export default function App() {
     return refreshData().then(() => undefined);
   }, [refreshData]);
 
-  // TEMP-QA-MOCK (revert after QA): let the harness refresh UI after seeding.
-  (window as any).__refresh = refresh;
-
   /** Picks the active business: the stored choice when it still exists, else the first. */
   const pickActive = useCallback((list: Business[]): number | null => {
     if (list.length === 0) return null;
