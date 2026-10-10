@@ -8,6 +8,7 @@ import {
 } from "../db";
 import { downloadCsv, toCsv } from "../backup";
 import { fmtDate, fmtMoney, todayISO, useLang, useStrings } from "../i18n";
+import EmptyState from "../components/EmptyState";
 import type { Contractor, ContractorPayment } from "../types";
 
 interface Props {
@@ -182,7 +183,13 @@ export default function Contractors({ contractors, payments, refresh }: Props) {
             </div>
           </div>
           {contractors.length === 0 ? (
-            <p className="empty-note">{t.contractors.empty}</p>
+            <EmptyState
+              icon="🤝"
+              title={t.contractors.emptyTitle}
+              body={t.contractors.emptyBody}
+              actionLabel={t.contractors.new}
+              onAction={() => setShowAdd(true)}
+            />
           ) : (
             <ul className="row-list">
               {contractors.map((c) => {

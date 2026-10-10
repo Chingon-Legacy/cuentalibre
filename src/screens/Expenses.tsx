@@ -11,6 +11,7 @@ import {
   type PickedImage,
 } from "../photos";
 import { fmtDate, fmtMoney, todayISO, useLang, useStrings } from "../i18n";
+import EmptyState from "../components/EmptyState";
 import type { Expense } from "../types";
 import CsvImport from "./CsvImport";
 
@@ -363,7 +364,13 @@ export default function Expenses({ expenses, refresh }: Props) {
         </div>
 
         {filtered.length === 0 ? (
-          <p className="empty-note">{t.expenses.empty}</p>
+          <EmptyState
+            icon="💸"
+            title={t.expenses.emptyTitle}
+            body={t.expenses.emptyBody}
+            actionLabel={t.expenses.add}
+            onAction={startCreate}
+          />
         ) : (
           <ul className="row-list">
             {filtered.map((e) => (

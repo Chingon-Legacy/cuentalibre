@@ -2,6 +2,7 @@ import { useState } from "react";
 import { useBiz } from "../App";
 import { addBill, deleteBill, payBill, updateBill } from "../db";
 import { fmtDate, fmtMoney, todayISO, useLang, useStrings } from "../i18n";
+import EmptyState from "../components/EmptyState";
 import type { Bill } from "../types";
 
 interface Props {
@@ -164,7 +165,13 @@ export default function Bills({ bills, refresh }: Props) {
 
       <div className="panel">
         {bills.length === 0 ? (
-          <p className="empty-note">{t.bills.empty}</p>
+          <EmptyState
+            icon="📄"
+            title={t.bills.emptyTitle}
+            body={t.bills.emptyBody}
+            actionLabel={t.bills.new}
+            onAction={startCreate}
+          />
         ) : (
           <ul className="row-list">
             {bills.map((b) => (

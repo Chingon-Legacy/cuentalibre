@@ -1,8 +1,9 @@
 import { useMemo, useState } from "react";
-import { useBiz, useBizName } from "../App";
+import { useBiz } from "../App";
 import { addInvoice, calcTaxAmount, deleteInvoice, invoiceTotal, setInvoiceStatus, updateInvoice } from "../db";
 import { getStateInfo } from "../data/us-states";
 import { fmtDate, fmtMoney, todayISO, useLang, useStrings } from "../i18n";
+import EmptyState from "../components/EmptyState";
 import type { Invoice, Recurrence } from "../types";
 
 interface Props {
@@ -21,8 +22,7 @@ function InvoiceDetail({
 }) {
   const t = useStrings();
   const lang = useLang();
-  const { bizName } = useBizName();
-  const { pack } = useBiz();
+  const { bizName, pack } = useBiz();
   const today = todayISO();
 
   const catLabel = (id: string) => {
@@ -123,8 +123,7 @@ function InvoiceDetail({
 export default function Invoices({ invoices, refresh }: Props) {
   const t = useStrings();
   const lang = useLang();
-  const { pack, stateCode } = useBiz();
-  const { bizName } = useBizName();
+  const { pack, stateCode, bizName } = useBiz();
   const [showForm, setShowForm] = useState(false);
   const [editing, setEditing] = useState<Invoice | null>(null);
   const [viewing, setViewing] = useState<Invoice | null>(null);
@@ -405,7 +404,13 @@ export default function Invoices({ invoices, refresh }: Props) {
         </div>
 
         {filtered.length === 0 ? (
-          <p className="empty-note">{t.invoices.empty}</p>
+          <EmptyState
+            icon="🧾"
+            title={t.invoices.emptyTitle}
+            body={t.invoices.emptyBody}
+            actionLabel={t.invoices.new}
+            onAction={startCreate}
+          />
         ) : (
           <ul className="row-list">
             {filtered.map((inv) => (

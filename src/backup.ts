@@ -1,36 +1,37 @@
 import { open, save } from "@tauri-apps/plugin-dialog";
 import { readTextFile, writeTextFile } from "@tauri-apps/plugin-fs";
 import {
-  getBills,
-  getContractorPayments,
-  getContractors,
-  getExpenses,
-  getInvoices,
-  getQuotes,
-  getSetting,
+  exportAllData,
+  getActiveBusinessId,
+  getBusinesses,
   importBackup,
 } from "./db";
 import type { BackupData } from "./types";
 
 /**
- * "Save work" — exports everything to a dated JSON backup file
- * on the user's own computer (via the native save dialog).
+ * "Save work" — exports everything (all businesses) to a dated JSON
+ * backup file on the user's own computer (via the native save dialog).
  * Returns true when a file was written, false when cancelled.
  */
 export async function saveWork(): Promise<boolean> {
+  const all = await exportAllData();
+  const businesses = await getBusinesses();
+  const activeId = getActiveBusinessId();
+  const active = businesses.find((b) => b.id === activeId) ?? businesses[0];
   const data: BackupData = {
     app: "cuentalibre",
-    version: 1,
+    version: 2,
     exportedAt: new Date().toISOString(),
-    businessType: (await getSetting("businessType")) ?? "freelancer",
-    businessName: (await getSetting("businessName")) ?? "",
-    businessState: (await getSetting("businessState")) ?? "",
-    invoices: await getInvoices(),
-    expenses: await getExpenses(),
-    bills: await getBills(),
-    quotes: await getQuotes(),
-    contractors: await getContractors(),
-    contractorPayments: await getContractorPayments(),
+    businesses: all.businesses,
+    businessType: active?.type ?? "freelancer",
+    businessName: active?.name ?? "",
+    businessState: active?.state ?? "",
+    invoices: all.invoices,
+    expenses: all.expenses,
+    bills: all.bills,
+    quotes: all.quotes,
+    contractors: all.contractors,
+    contractorPayments: all.contractorPayments,
   };
   const today = new Date().toISOString().slice(0, 10);
   const path = await save({
@@ -70,6 +71,40 @@ export async function openBackup(): Promise<OpenBackupResult> {
   }
   await importBackup(data);
   return "ok";
+}
+
+/**
+ * Downloads a plain-text file (e.g. the tax package) to the user's computer.
+ * Uses the native save dialog inside Tauri; falls back to a
+ * plain browser download otherwise.
+ */
+export async function downloadText(
+  filename: string,
+  text: string,
+  filterName = "Text"
+): Promise<void> {
+  const ext = filename.split(".").pop() ?? "txt";
+  try {
+    const path = await save({
+      defaultPath: filename,
+      filters: [{ name: filterName, extensions: [ext] }],
+    });
+    if (path) {
+      await writeTextFile(path, text);
+      return;
+    }
+  } catch {
+    // Not running inside Tauri — fall through to browser download.
+  }
+  const blob = new Blob([text], { type: "text/plain;charset=utf-8" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
 }
 
 /**

@@ -15,8 +15,17 @@ export type InvoiceStatus = "waiting" | "paid";
 
 export type Recurrence = "none" | "weekly" | "monthly";
 
+export interface Business {
+  id: number;
+  name: string;
+  type: string; // business-type id, selects the category pack
+  state: string; // US state code, e.g. "IN"
+  created_at: string;
+}
+
 export interface Invoice {
   id: number;
+  business_id: number;
   number: string; // sequential, e.g. "0001"
   customer: string;
   amount: number; // subtotal before sales tax
@@ -32,6 +41,7 @@ export interface Invoice {
 
 export interface Expense {
   id: number;
+  business_id: number;
   description: string;
   amount: number;
   category: string;
@@ -44,6 +54,7 @@ export type BillStatus = "unpaid" | "paid";
 
 export interface Bill {
   id: number;
+  business_id: number;
   payee: string;
   amount: number;
   category: string;
@@ -56,6 +67,7 @@ export type QuoteStatus = "draft" | "sent" | "accepted" | "declined";
 
 export interface Quote {
   id: number;
+  business_id: number;
   number: string; // sequential, e.g. "0001"
   customer: string;
   amount: number;
@@ -67,6 +79,7 @@ export interface Quote {
 
 export interface Contractor {
   id: number;
+  business_id: number;
   name: string;
   note: string;
   created_at: string;
@@ -74,6 +87,7 @@ export interface Contractor {
 
 export interface ContractorPayment {
   id: number;
+  business_id: number;
   contractor_id: number;
   amount: number;
   date: string; // YYYY-MM-DD
@@ -83,8 +97,10 @@ export interface ContractorPayment {
 
 export interface BackupData {
   app: "cuentalibre";
-  version: 1;
+  version: 2;
   exportedAt: string;
+  businesses: Business[];
+  // Kept for human readability; the businesses array is authoritative.
   businessType: string;
   businessName: string;
   businessState: string;

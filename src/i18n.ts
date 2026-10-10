@@ -79,6 +79,9 @@ const en = {
     delete: "Delete",
     confirmDelete: "Delete this invoice?",
     empty: "No invoices yet. Create your first one!",
+    emptyTitle: "Invoices = getting paid",
+    emptyBody:
+      "An invoice is a request for payment you send to a customer. Create one, send it, and when they pay it counts as money in.",
     number: "Invoice #",
     view: "View",
     edit: "Edit",
@@ -122,6 +125,9 @@ const en = {
     delete: "Delete",
     confirmDelete: "Delete this expense?",
     empty: "No expenses yet.",
+    emptyTitle: "Track what you spend",
+    emptyBody:
+      "Expenses are what you spend to run your business. Logging them keeps your books honest and lowers your taxes.",
     other: "Other",
     edit: "Edit",
     editTitle: "Edit expense",
@@ -145,6 +151,9 @@ const en = {
     hideInvoices: "Hide",
     empty:
       "No customers yet. They'll show up here when you create invoices.",
+    emptyTitle: "Your customers will appear here",
+    emptyBody:
+      "Everyone you invoice shows up here automatically, with what they still owe.",
   },
 
   bills: {
@@ -168,6 +177,9 @@ const en = {
     overdue: "Overdue",
     dueSoon: "Due soon",
     empty: "No bills. Add the ones you owe so nothing slips by.",
+    emptyTitle: "Never miss a payment",
+    emptyBody:
+      "Bills are payments you owe — rent, utilities, suppliers. Add them with their due dates and we'll remind you before they're late.",
     totalOwed: "Total you owe",
     paidNote: "Marking paid also adds it to your expenses.",
   },
@@ -199,6 +211,9 @@ const en = {
     convert: "Convert to invoice",
     converted: "Quote converted to a new invoice.",
     empty: "No quotes yet. Send one to win the next job.",
+    emptyTitle: "Quotes win jobs",
+    emptyBody:
+      "A quote tells a customer what a job will cost before you start. If they say yes, turn it into an invoice in one tap.",
   },
 
   contractors: {
@@ -213,6 +228,9 @@ const en = {
     delete: "Delete",
     confirmDelete: "Delete this contractor and all their payments?",
     empty: "No contractors yet.",
+    emptyTitle: "Track your helpers",
+    emptyBody:
+      "Contractors are people you pay to help with your business. We track yearly totals and flag anyone over $600 for a 1099.",
     selectContractor: "Select a contractor",
     payments: "Payments",
     addPayment: "Log payment",
@@ -319,11 +337,140 @@ const en = {
     confirmRestore:
       "Open this backup? Your current data will be replaced.",
     working: "Working…",
+    bizTitle: "Your businesses",
+    addBusiness: "＋ Add another business",
+    deleteBiz: "Delete",
+    confirmDeleteBiz:
+      "Delete “{name}”? Everything from this business — invoices, expenses, bills, all of it — will be gone for good.",
+    lastBizNote: "You need at least one business.",
+    remindersTitle: "Due-date reminders",
+    remindersDesc: "Get a gentle nudge when an invoice or bill is almost due.",
+    on: "On",
+    off: "Off",
   },
 
   common: {
     yes: "Yes",
     no: "No",
+  },
+
+  header: {
+    addBusiness: "＋ Add another business",
+  },
+
+  insights: {
+    title: "💡 Worth a look",
+    late: "⏰ {n} late invoices — that's {money} waiting for you",
+    billsSoon: "📄 {money} in bills due in the next 7 days",
+    catUp: "📈 {category} cost {pct}% more than last month",
+    topCat: "💸 Most of your spending this month went to {category} ({money})",
+  },
+
+  tour: {
+    next: "Next",
+    back: "Back",
+    skip: "Skip tour",
+    done: "Done",
+    stepNavT: "Everything lives here",
+    stepNavB:
+      "These buttons take you to your money screens: Home, Invoices, Bills, and the rest.",
+    stepTotalsT: "Money in, money out",
+    stepTotalsB:
+      "The top three numbers show what came in, what went out, and what's left.",
+    stepNewInvoiceT: "Get paid",
+    stepNewInvoiceB: "Tap here to create your first invoice whenever you're ready.",
+    stepLangT: "Your language",
+    stepLangB: "Switch between English and Español anytime you like.",
+    stepHelpT: "Need a hand?",
+    stepHelpB: "Tap the ? anytime for plain-words help about any screen.",
+  },
+
+  help: {
+    title: "How CuentaLibre works",
+    close: "Close",
+    homeT: "🏠 Home",
+    homeB:
+      "Home shows your money at a glance: what came in, what went out, and what's left. Below that you'll see who owes you, bills coming due, and your recent spending.",
+    invoicesT: "🧾 Invoices",
+    invoicesB:
+      "An invoice is a request for payment you send to a customer. When they pay, it counts as money in. Late invoices show in red so you can follow up.",
+    quotesT: "📝 Quotes",
+    quotesB:
+      "A quote tells a customer what a job will cost before you start. If they say yes, you can turn it into an invoice in one tap.",
+    billsT: "📄 Bills",
+    billsB:
+      "Bills are payments you owe, like rent or utilities. Adding them here with their due dates means nothing slips by. Marking one paid also logs it as an expense.",
+    expensesT: "💸 Expenses",
+    expensesB:
+      "Expenses are what you spend to run your business — supplies, gas, tools. Logging them keeps your books honest and lowers your taxes. You can attach a photo of the receipt.",
+    customersT: "👥 Customers",
+    customersB:
+      "Everyone you've ever invoiced shows up here, with what they were billed, what they paid, and what they still owe.",
+    contractorsT: "🤝 Contractors",
+    contractorsB:
+      "People you pay to help with your business go here. CuentaLibre tracks what you paid each person, and flags anyone over $600 a year — that's when the IRS wants a 1099-NEC form.",
+    reportsT: "📊 Reports",
+    reportsB:
+      "Reports turn your numbers into summaries you can download: money in vs money out, spending by category, and a plain-words tax guide. The tax package button builds one file your tax preparer will love.",
+    taxT: "What is sales tax?",
+    taxB:
+      "Some states charge a tax on what you sell. CuentaLibre adds your state's base rate to your invoices automatically, but your city or county may add more — always verify your local rate.",
+    backupT: "How do backups work?",
+    backupB:
+      "Go to Settings → Save work to download a backup file with everything, from every business. Keep a copy somewhere safe, like a USB drive. Open backup restores it all.",
+  },
+
+  reminders: {
+    title: "CuentaLibre",
+    invDueSoonOne: "🧾 1 invoice due soon",
+    invDueSoon: "🧾 {n} invoices due soon",
+    invOverdueOne: "🧾 1 invoice overdue",
+    invOverdue: "🧾 {n} invoices overdue",
+    billDueSoonOne: "📄 1 bill due soon",
+    billDueSoon: "📄 {n} bills due soon",
+    billOverdueOne: "📄 1 bill overdue",
+    billOverdue: "📄 {n} bills overdue",
+  },
+
+  taxpackage: {
+    title: "Tax package",
+    desc: "Everything your tax preparer needs, in one file.",
+    year: "Year",
+    btn: "📦 Get my tax package",
+    docTitle: "Tax package {year}",
+    business: "Business",
+    typeL: "Type",
+    stateL: "State",
+    profitSummary: "Profit summary",
+    income: "Income — money your customers paid you",
+    expensesW: "Expenses — money you spent running the business",
+    net: "Net — what's left",
+    expensesByCat: "Expenses by category",
+    salesTaxCollected: "Sales tax collected",
+    contractorTitle: "Payments to contractors in {year}",
+    needs1099: "— needs a 1099-NEC form (over $600)",
+    noContractors: "No contractor payments this year.",
+    unpaidTitle: "Unpaid invoices at the end of {year}",
+    unpaidNote: "These weren't paid yet, so they don't count as income this year.",
+    noUnpaid: "None — every invoice was paid.",
+    total: "Total",
+    preparedNote: "Prepared with CuentaLibre. Take this to your tax preparer.",
+  },
+
+  addbiz: {
+    title: "Add another business",
+    nameTitle: "What's this business called?",
+    nameSub: "Each business keeps its own invoices, expenses, and bills.",
+    namePh: "Business name",
+    bizTitle: "What kind of business is it?",
+    bizSub: "We'll set up the right money categories for it.",
+    stateTitle: "What state is it in?",
+    stateSub: "Sets the base sales tax rate on its invoices.",
+    statePh: "Choose your state…",
+    back: "Back",
+    next: "Continue",
+    create: "Add business",
+    cancel: "Cancel",
   },
 };
 
@@ -399,6 +546,9 @@ const es: typeof en = {
     delete: "Borrar",
     confirmDelete: "¿Borrar esta factura?",
     empty: "Aún no hay facturas. ¡Crea la primera!",
+    emptyTitle: "Facturas = recibir pagos",
+    emptyBody:
+      "Una factura es un cobro que le envías a un cliente. Créala, envíala, y cuando te pague contará como dinero que entró.",
     number: "Factura n.º",
     view: "Ver",
     edit: "Editar",
@@ -442,6 +592,9 @@ const es: typeof en = {
     delete: "Borrar",
     confirmDelete: "¿Borrar este gasto?",
     empty: "Aún no hay gastos.",
+    emptyTitle: "Registra lo que gastas",
+    emptyBody:
+      "Los gastos son lo que gastas para operar tu negocio. Registrarlos mantiene tus cuentas en orden y baja tus impuestos.",
     other: "Otro",
     edit: "Editar",
     editTitle: "Editar gasto",
@@ -465,6 +618,9 @@ const es: typeof en = {
     hideInvoices: "Ocultar",
     empty:
       "Aún no hay clientes. Aparecerán aquí cuando crees facturas.",
+    emptyTitle: "Tus clientes aparecerán aquí",
+    emptyBody:
+      "Todas las personas a las que les factures aparecen aquí automáticamente, con lo que aún deben.",
   },
 
   bills: {
@@ -488,6 +644,9 @@ const es: typeof en = {
     overdue: "Vencida",
     dueSoon: "Por vencer",
     empty: "No hay cuentas. Agrega las que debes para que no se te pase ninguna.",
+    emptyTitle: "Nunca olvides un pago",
+    emptyBody:
+      "Las cuentas son pagos que debes — renta, luz, proveedores. Agrégalas con sus fechas de vencimiento y te avisaremos antes de que se atrasen.",
     totalOwed: "Total que debes",
     paidNote: "Al marcarla pagada también se agrega a tus gastos.",
   },
@@ -519,6 +678,9 @@ const es: typeof en = {
     convert: "Convertir en factura",
     converted: "Cotización convertida en una nueva factura.",
     empty: "Aún no hay cotizaciones. Envía una para ganar el próximo trabajo.",
+    emptyTitle: "Las cotizaciones ganan trabajos",
+    emptyBody:
+      "Una cotización le dice a un cliente cuánto costará un trabajo antes de empezar. Si acepta, conviértela en factura con un toque.",
   },
 
   contractors: {
@@ -533,6 +695,9 @@ const es: typeof en = {
     delete: "Borrar",
     confirmDelete: "¿Borrar este contratista y todos sus pagos?",
     empty: "Aún no hay contratistas.",
+    emptyTitle: "Registra a tus ayudantes",
+    emptyBody:
+      "Los contratistas son personas a las que les pagas por ayudarte con tu negocio. Registramos los totales anuales y marcamos a quienes superen $600 para el 1099.",
     selectContractor: "Elige un contratista",
     payments: "Pagos",
     addPayment: "Registrar pago",
@@ -639,11 +804,140 @@ const es: typeof en = {
     confirmRestore:
       "¿Abrir este respaldo? Tus datos actuales serán reemplazados.",
     working: "Trabajando…",
+    bizTitle: "Tus negocios",
+    addBusiness: "＋ Agregar otro negocio",
+    deleteBiz: "Borrar",
+    confirmDeleteBiz:
+      "¿Borrar “{name}”? Todo de este negocio — facturas, gastos, cuentas, todo — se perderá para siempre.",
+    lastBizNote: "Necesitas al menos un negocio.",
+    remindersTitle: "Recordatorios de vencimiento",
+    remindersDesc: "Recibe un aviso amable cuando una factura o cuenta esté por vencer.",
+    on: "Activado",
+    off: "Desactivado",
   },
 
   common: {
     yes: "Sí",
     no: "No",
+  },
+
+  header: {
+    addBusiness: "＋ Agregar otro negocio",
+  },
+
+  insights: {
+    title: "💡 Vale la pena mirar",
+    late: "⏰ {n} facturas atrasadas — esos son {money} esperándote",
+    billsSoon: "📄 {money} en cuentas que vencen en los próximos 7 días",
+    catUp: "📈 {category} costó {pct}% más que el mes pasado",
+    topCat: "💸 La mayor parte de tu gasto este mes fue en {category} ({money})",
+  },
+
+  tour: {
+    next: "Siguiente",
+    back: "Atrás",
+    skip: "Omitir recorrido",
+    done: "Listo",
+    stepNavT: "Todo vive aquí",
+    stepNavB:
+      "Estos botones te llevan a tus pantallas: Inicio, Facturas, Cuentas y las demás.",
+    stepTotalsT: "Dinero que entra y sale",
+    stepTotalsB:
+      "Los tres números de arriba muestran lo que entró, lo que salió y lo que queda.",
+    stepNewInvoiceT: "Recibe pagos",
+    stepNewInvoiceB: "Toca aquí para crear tu primera factura cuando estés listo.",
+    stepLangT: "Tu idioma",
+    stepLangB: "Cambia entre English y Español cuando quieras.",
+    stepHelpT: "¿Necesitas ayuda?",
+    stepHelpB: "Toca el ? cuando quieras para ayuda en palabras simples sobre cualquier pantalla.",
+  },
+
+  help: {
+    title: "Cómo funciona CuentaLibre",
+    close: "Cerrar",
+    homeT: "🏠 Inicio",
+    homeB:
+      "Inicio muestra tu dinero de un vistazo: lo que entró, lo que salió y lo que queda. Abajo verás quién te debe, las cuentas por vencer y tus gastos recientes.",
+    invoicesT: "🧾 Facturas",
+    invoicesB:
+      "Una factura es un cobro que le envías a un cliente. Cuando te paga, cuenta como dinero que entró. Las facturas atrasadas se muestran en rojo para que les des seguimiento.",
+    quotesT: "📝 Cotizaciones",
+    quotesB:
+      "Una cotización le dice a un cliente cuánto costará un trabajo antes de empezar. Si acepta, puedes convertirla en factura con un toque.",
+    billsT: "📄 Cuentas",
+    billsB:
+      "Las cuentas son pagos que debes — renta, luz, proveedores. Agregarlas aquí con sus fechas de vencimiento evita que se te pase alguna. Al marcar una como pagada también se registra como gasto.",
+    expensesT: "💸 Gastos",
+    expensesB:
+      "Los gastos son lo que gastas para operar tu negocio — materiales, gasolina, herramientas. Registrarlos mantiene tus cuentas en orden y baja tus impuestos. Puedes adjuntar una foto del recibo.",
+    customersT: "👥 Clientes",
+    customersB:
+      "Todas las personas a las que les has facturado aparecen aquí, con lo facturado, lo pagado y lo que aún deben.",
+    contractorsT: "🤝 Contratistas",
+    contractorsB:
+      "Las personas a las que les pagas por ayudarte con tu negocio van aquí. CuentaLibre registra lo que le pagaste a cada uno, y marca a quienes superen $600 al año — ahí es cuando el IRS pide el formulario 1099-NEC.",
+    reportsT: "📊 Reportes",
+    reportsB:
+      "Los reportes convierten tus números en resúmenes descargables: entradas vs salidas, gastos por categoría y una guía de impuestos en palabras simples. El botón del paquete de impuestos crea un archivo que a tu preparador le encantará.",
+    taxT: "¿Qué es el impuesto sobre las ventas?",
+    taxB:
+      "Algunos estados cobran un impuesto sobre lo que vendes. CuentaLibre agrega automáticamente la tasa base de tu estado a tus facturas, pero tu ciudad o condado puede agregar más — siempre verifica tu tasa local.",
+    backupT: "¿Cómo funcionan los respaldos?",
+    backupB:
+      "Ve a Ajustes → Guardar respaldo para descargar un archivo con todo, de todos tus negocios. Guarda una copia en un lugar seguro, como una memoria USB. Abrir respaldo lo restaura todo.",
+  },
+
+  reminders: {
+    title: "CuentaLibre",
+    invDueSoonOne: "🧾 1 factura por vencer",
+    invDueSoon: "🧾 {n} facturas por vencer",
+    invOverdueOne: "🧾 1 factura vencida",
+    invOverdue: "🧾 {n} facturas vencidas",
+    billDueSoonOne: "📄 1 cuenta por vencer",
+    billDueSoon: "📄 {n} cuentas por vencer",
+    billOverdueOne: "📄 1 cuenta vencida",
+    billOverdue: "📄 {n} cuentas vencidas",
+  },
+
+  taxpackage: {
+    title: "Paquete de impuestos",
+    desc: "Todo lo que necesita tu preparador de impuestos, en un archivo.",
+    year: "Año",
+    btn: "📦 Obtener mi paquete de impuestos",
+    docTitle: "Paquete de impuestos {year}",
+    business: "Negocio",
+    typeL: "Tipo",
+    stateL: "Estado",
+    profitSummary: "Resumen de ganancias",
+    income: "Ingresos — dinero que te pagaron tus clientes",
+    expensesW: "Gastos — dinero que gastaste en el negocio",
+    net: "Neto — lo que queda",
+    expensesByCat: "Gastos por categoría",
+    salesTaxCollected: "Impuesto sobre las ventas cobrado",
+    contractorTitle: "Pagos a contratistas en {year}",
+    needs1099: "— necesita el formulario 1099-NEC (más de $600)",
+    noContractors: "No hubo pagos a contratistas este año.",
+    unpaidTitle: "Facturas sin pagar al final de {year}",
+    unpaidNote: "Aún no fueron pagadas, así que no cuentan como ingresos este año.",
+    noUnpaid: "Ninguna — todas las facturas fueron pagadas.",
+    total: "Total",
+    preparedNote: "Preparado con CuentaLibre. Llévalo a tu preparador de impuestos.",
+  },
+
+  addbiz: {
+    title: "Agregar otro negocio",
+    nameTitle: "¿Cómo se llama este negocio?",
+    nameSub: "Cada negocio tiene sus propias facturas, gastos y cuentas.",
+    namePh: "Nombre del negocio",
+    bizTitle: "¿Qué tipo de negocio es?",
+    bizSub: "Prepararemos las categorías adecuadas para este negocio.",
+    stateTitle: "¿En qué estado está?",
+    stateSub: "Define la tasa base de impuesto sobre las ventas en sus facturas.",
+    statePh: "Elige tu estado…",
+    back: "Atrás",
+    next: "Continuar",
+    create: "Agregar negocio",
+    cancel: "Cancelar",
   },
 };
 

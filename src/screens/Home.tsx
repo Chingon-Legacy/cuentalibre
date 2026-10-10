@@ -1,5 +1,6 @@
 import { useMemo } from "react";
 import { fmtDate, fmtMoney, todayISO, useLang, useStrings } from "../i18n";
+import { useBiz } from "../App";
 import { invoiceTotal } from "../db";
 import type { Bill, Expense, Invoice, Screen } from "../types";
 
@@ -143,6 +144,126 @@ function nextQuarterlyDue(): string {
   return `${y + 1}-01-15`;
 }
 
+function monthKey(offset: number): string {
+  const d = new Date();
+  const t = new Date(d.getFullYear(), d.getMonth() - offset, 1);
+  return `${t.getFullYear()}-${String(t.getMonth() + 1).padStart(2, "0")}`;
+}
+
+function plusDays(iso: string, n: number): string {
+  const [y, m, d] = iso.split("-").map(Number);
+  const dt = new Date(y, m - 1, d);
+  dt.setDate(dt.getDate() + n);
+  return `${dt.getFullYear()}-${String(dt.getMonth() + 1).padStart(2, "0")}-${String(
+    dt.getDate()
+  ).padStart(2, "0")}`;
+}
+
+/**
+ * Plain-words insights computed from this business's invoices,
+ * expenses, and bills. Shows at most 3 warm one-liners; the whole
+ * panel hides when there's nothing worth saying.
+ */
+function Insights({
+  invoices,
+  expenses,
+  bills,
+}: {
+  invoices: Invoice[];
+  expenses: Expense[];
+  bills: Bill[];
+}) {
+  const t = useStrings();
+  const lang = useLang();
+  const { pack } = useBiz();
+
+  const catLabel = (id: string) => {
+    const c = [...pack.income, ...pack.expense].find((x) => x.id === id);
+    return c ? (lang === "es" ? c.es : c.en) : t.expenses.other;
+  };
+
+  const notes = useMemo(() => {
+    const out: string[] = [];
+    const today = todayISO();
+
+    // (a) late unpaid invoices
+    const late = invoices.filter((i) => i.status === "waiting" && i.due_date < today);
+    if (late.length > 0) {
+      const total = late.reduce((s, i) => s + invoiceTotal(i), 0);
+      out.push(
+        t.insights.late
+          .replace("{n}", String(late.length))
+          .replace("{money}", fmtMoney(total, lang))
+      );
+    }
+
+    // (b) unpaid bills due in the next 7 days
+    const soon = bills.filter(
+      (b) => b.status === "unpaid" && b.due_date >= today && b.due_date <= plusDays(today, 7)
+    );
+    if (soon.length > 0) {
+      const total = soon.reduce((s, b) => s + b.amount, 0);
+      out.push(t.insights.billsSoon.replace("{money}", fmtMoney(total, lang)));
+    }
+
+    // (c) top expense category this month vs last month (only if ≥120% of last)
+    const thisM = new Map<string, number>();
+    const lastM = new Map<string, number>();
+    const tk = monthKey(0);
+    const lk = monthKey(1);
+    for (const e of expenses) {
+      if (e.date.startsWith(tk)) thisM.set(e.category, (thisM.get(e.category) ?? 0) + e.amount);
+      else if (e.date.startsWith(lk)) lastM.set(e.category, (lastM.get(e.category) ?? 0) + e.amount);
+    }
+    let topCat = "";
+    let topAmt = 0;
+    for (const [c, a] of thisM) {
+      if (a > topAmt) {
+        topAmt = a;
+        topCat = c;
+      }
+    }
+    let spikeShown = false;
+    if (topCat) {
+      const lastAmt = lastM.get(topCat) ?? 0;
+      if (lastAmt > 0 && topAmt >= lastAmt * 1.2) {
+        const pct = Math.round(((topAmt - lastAmt) / lastAmt) * 100);
+        out.push(
+          t.insights.catUp
+            .replace("{category}", catLabel(topCat))
+            .replace("{pct}", String(pct))
+        );
+        spikeShown = true;
+      }
+    }
+
+    // (d) biggest expense category this month (skipped when (c) already covers it)
+    if (!spikeShown && topCat) {
+      out.push(
+        t.insights.topCat
+          .replace("{category}", catLabel(topCat))
+          .replace("{money}", fmtMoney(topAmt, lang))
+      );
+    }
+
+    return out.slice(0, 3);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [invoices, expenses, bills, t, lang, pack]);
+
+  if (notes.length === 0) return null;
+
+  return (
+    <div className="panel">
+      <h2 style={{ marginTop: 0 }}>{t.insights.title}</h2>
+      <ul className="insight-list">
+        {notes.map((n, i) => (
+          <li key={i}>{n}</li>
+        ))}
+      </ul>
+    </div>
+  );
+}
+
 export default function Home({ invoices, expenses, bills, go }: Props) {
   const t = useStrings();
   const lang = useLang();
@@ -188,6 +309,8 @@ export default function Home({ invoices, expenses, bills, go }: Props) {
         </div>
       </div>
 
+      <Insights invoices={invoices} expenses={expenses} bills={bills} />
+
       <div className="panel tax-reminder">
         <h2 style={{ marginTop: 0 }}>🧾 {t.home.taxTitle}</h2>
         <p style={{ margin: "4px 0" }}>
@@ -209,7 +332,7 @@ export default function Home({ invoices, expenses, bills, go }: Props) {
         <div className="panel">
           <div className="toolbar">
             <h2 style={{ margin: 0 }}>🧾 {t.home.whoOwesMe}</h2>
-            <button type="button" className="btn small" onClick={() => go("invoices")}>
+            <button type="button" className="btn small tour-new-invoice" onClick={() => go("invoices")}>
               {t.home.newInvoice}
             </button>
           </div>

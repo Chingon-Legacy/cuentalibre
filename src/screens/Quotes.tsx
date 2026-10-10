@@ -3,6 +3,7 @@ import { useBiz } from "../App";
 import { addInvoice, addQuote, deleteQuote, setQuoteStatus, updateQuote } from "../db";
 import { getStateInfo } from "../data/us-states";
 import { fmtDate, fmtMoney, useLang, useStrings } from "../i18n";
+import EmptyState from "../components/EmptyState";
 import type { Quote, QuoteStatus } from "../types";
 
 interface Props {
@@ -188,7 +189,13 @@ export default function Quotes({ quotes, refresh }: Props) {
 
       <div className="panel">
         {quotes.length === 0 ? (
-          <p className="empty-note">{t.quotes.empty}</p>
+          <EmptyState
+            icon="📝"
+            title={t.quotes.emptyTitle}
+            body={t.quotes.emptyBody}
+            actionLabel={t.quotes.new}
+            onAction={startCreate}
+          />
         ) : (
           <ul className="row-list">
             {quotes.map((q) => (

@@ -1,5 +1,6 @@
 import { useMemo, useState } from "react";
 import { fmtDate, fmtMoney, todayISO, useLang, useStrings } from "../i18n";
+import EmptyState from "../components/EmptyState";
 import { invoiceTotal } from "../db";
 import type { Invoice } from "../types";
 
@@ -49,7 +50,11 @@ export default function Customers({ invoices }: Props) {
 
       <div className="panel">
         {rows.length === 0 ? (
-          <p className="empty-note">{t.customers.empty}</p>
+          <EmptyState
+            icon="👥"
+            title={t.customers.emptyTitle}
+            body={t.customers.emptyBody}
+          />
         ) : (
           <ul className="row-list">
             {rows.map((r) => (

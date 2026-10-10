@@ -1,15 +1,19 @@
 import { useMemo, useState } from "react";
 import { useBiz } from "../App";
-import { downloadCsv, toCsv } from "../backup";
+import { downloadCsv, downloadText, toCsv } from "../backup";
 import { invoiceTotal } from "../db";
+import { businessTypes } from "../data/categories";
+import { US_STATES } from "../data/us-states";
 import { fmtDate, fmtMoney, todayISO, useLang, useStrings } from "../i18n";
-import type { Expense, Invoice } from "../types";
+import type { Contractor, ContractorPayment, Expense, Invoice } from "../types";
 
 type ReportId = "summary" | "income" | "expenses" | "owes" | "tax" | "monthly" | "taxguide";
 
 interface Props {
   invoices: Invoice[];
   expenses: Expense[];
+  contractors: Contractor[];
+  contractorPayments: ContractorPayment[];
 }
 
 function firstOfMonth(): string {
@@ -25,10 +29,10 @@ function groupByCategory(items: { category: string; amount: number }[]): [string
 
 const money = (n: number) => (Math.round(n * 100) / 100).toFixed(2);
 
-export default function Reports({ invoices, expenses }: Props) {
+export default function Reports({ invoices, expenses, contractors, contractorPayments }: Props) {
   const t = useStrings();
   const lang = useLang();
-  const { pack } = useBiz();
+  const { pack, active, bizName } = useBiz();
   const [report, setReport] = useState<ReportId>("summary");
   const [from, setFrom] = useState(firstOfMonth());
   const [to, setTo] = useState(todayISO());
@@ -164,6 +168,127 @@ export default function Reports({ invoices, expenses }: Props) {
       rows = months.map((m) => [m.label, money(m.in), money(m.out), money(m.in - m.out)]);
     }
     await downloadCsv(name, toCsv(headers, rows));
+  };
+
+  /* ---------- one-tap tax package ---------- */
+
+  const taxYears = useMemo(() => {
+    const years = new Set<number>();
+    for (const i of invoices) years.add(Number(i.due_date.slice(0, 4)));
+    for (const e of expenses) years.add(Number(e.date.slice(0, 4)));
+    for (const p of contractorPayments) years.add(Number(p.date.slice(0, 4)));
+    years.add(new Date().getFullYear());
+    return [...years].filter((y) => Number.isFinite(y) && y > 2000).sort((a, b) => b - a);
+  }, [invoices, expenses, contractorPayments]);
+
+  const [taxYear, setTaxYear] = useState<number>(() => new Date().getFullYear());
+  const [pkgWorking, setPkgWorking] = useState(false);
+
+  /** Builds the tax-package Markdown file in the current UI language. */
+  const buildTaxPackage = (year: number): string => {
+    const tp = t.taxpackage;
+    const y = String(year);
+    const L: string[] = [];
+
+    const bt = businessTypes.find((b) => b.id === (active?.type ?? ""));
+    const typeLabel = bt ? (lang === "es" ? bt.es : bt.en) : "";
+    const stateName =
+      US_STATES.find((s) => s.code === (active?.state ?? ""))?.name ?? active?.state ?? "";
+
+    L.push(`# ${tp.docTitle.replace("{year}", y)} — ${bizName || "CuentaLibre"}`);
+    L.push("");
+    L.push(`${tp.business}: ${bizName || "CuentaLibre"}`);
+    if (typeLabel) L.push(`${tp.typeL}: ${typeLabel}`);
+    if (stateName) L.push(`${tp.stateL}: ${stateName}`);
+    L.push("");
+
+    const paidInYear = invoices.filter((i) => i.status === "paid" && i.due_date.startsWith(y));
+    const expInYear = expenses.filter((e) => e.date.startsWith(y));
+    const income = paidInYear.reduce((s, i) => s + invoiceTotal(i), 0);
+    const out = expInYear.reduce((s, e) => s + e.amount, 0);
+    const taxCollected = paidInYear.reduce((s, i) => s + i.tax_amount, 0);
+
+    L.push(`## ${tp.profitSummary}`);
+    L.push("");
+    L.push(`- ${tp.income}: ${fmtMoney(income, lang)}`);
+    L.push(`- ${tp.expensesW}: ${fmtMoney(out, lang)}`);
+    L.push(`- ${tp.net}: ${fmtMoney(income - out, lang)}`);
+    L.push("");
+
+    L.push(`## ${tp.expensesByCat}`);
+    L.push("");
+    const expByCat = groupByCategory(expInYear);
+    for (const [c, a] of expByCat) {
+      L.push(`- ${catLabel(c)}: ${fmtMoney(a, lang)}`);
+    }
+    L.push(`- **${tp.total}: ${fmtMoney(out, lang)}**`);
+    L.push("");
+
+    L.push(`## ${tp.salesTaxCollected}`);
+    L.push("");
+    L.push(fmtMoney(taxCollected, lang));
+    L.push("");
+
+    L.push(`## ${tp.contractorTitle.replace("{year}", y)}`);
+    L.push("");
+    const payInYear = contractorPayments.filter((p) => p.date.startsWith(y));
+    const totals = new Map<number, number>();
+    for (const p of payInYear) {
+      totals.set(p.contractor_id, (totals.get(p.contractor_id) ?? 0) + p.amount);
+    }
+    const rows = contractors
+      .map((c) => ({ name: c.name, total: totals.get(c.id) ?? 0 }))
+      .filter((r) => r.total > 0)
+      .sort((a, b) => b.total - a.total);
+    if (rows.length === 0) {
+      L.push(tp.noContractors);
+    } else {
+      for (const r of rows) {
+        const flag = r.total >= 600 ? ` ${tp.needs1099}` : "";
+        L.push(`- ${r.name}: ${fmtMoney(r.total, lang)}${flag}`);
+      }
+    }
+    L.push("");
+
+    L.push(`## ${tp.unpaidTitle.replace("{year}", y)}`);
+    L.push("");
+    L.push(tp.unpaidNote);
+    L.push("");
+    const unpaidEnd = invoices
+      .filter((i) => i.status === "waiting" && i.due_date <= `${y}-12-31`)
+      .sort((a, b) => a.due_date.localeCompare(b.due_date));
+    if (unpaidEnd.length === 0) {
+      L.push(tp.noUnpaid);
+    } else {
+      for (const i of unpaidEnd) {
+        L.push(
+          `- #${i.number || "—"} · ${i.customer}: ${fmtMoney(invoiceTotal(i), lang)} (${t.reports.dueDate}: ${i.due_date})`
+        );
+      }
+    }
+    L.push("");
+    L.push("---");
+    L.push("");
+    L.push(`_${t.reports.disclaimer}_`);
+    L.push("");
+    L.push(`_${t.reports.keepRecordsWhy}_`);
+    L.push("");
+    L.push(`_${tp.preparedNote}_`);
+
+    return L.join("\n");
+  };
+
+  const downloadPackage = async () => {
+    setPkgWorking(true);
+    try {
+      await downloadText(
+        `cuentalibre-tax-package-${taxYear}.md`,
+        buildTaxPackage(taxYear),
+        "Markdown"
+      );
+    } finally {
+      setPkgWorking(false);
+    }
   };
 
   const hasData =
@@ -407,6 +532,28 @@ export default function Reports({ invoices, expenses }: Props) {
             </tbody>
           </table>
         )}
+      </div>
+
+      <div className="panel tax-package">
+        <h2 style={{ marginTop: 0 }}>📦 {t.taxpackage.title}</h2>
+        <p className="subtitle">{t.taxpackage.desc}</p>
+        <div className="report-controls" style={{ marginBottom: 0 }}>
+          <div className="field">
+            <label>{t.taxpackage.year}</label>
+            <select value={taxYear} onChange={(e) => setTaxYear(Number(e.target.value))}>
+              {taxYears.map((y) => (
+                <option key={y} value={y}>
+                  {y}
+                </option>
+              ))}
+            </select>
+          </div>
+          <div className="field">
+            <button type="button" className="btn" disabled={pkgWorking} onClick={downloadPackage}>
+              {t.taxpackage.btn}
+            </button>
+          </div>
+        </div>
       </div>
     </div>
   );

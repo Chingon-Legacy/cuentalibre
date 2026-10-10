@@ -1044,3 +1044,210 @@ table.report th.num {
   border-color: var(--blue);
   background: var(--blue-light);
 }
+
+/* ---------- business switcher + header tools ---------- */
+
+.header-tools {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.help-btn {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  border: 2px solid rgba(255, 255, 255, 0.75);
+  background: transparent;
+  color: #fff;
+  font-size: 17px;
+  font-weight: 800;
+  line-height: 1;
+  cursor: pointer;
+  flex-shrink: 0;
+}
+
+.help-btn:hover {
+  background: rgba(255, 255, 255, 0.18);
+}
+
+.biz-switcher {
+  background: transparent;
+  border: none;
+  color: #fff;
+  font-size: 20px;
+  font-weight: 800;
+  letter-spacing: 0.2px;
+  cursor: pointer;
+  max-width: 300px;
+  text-overflow: ellipsis;
+  font-family: inherit;
+  padding: 4px 0;
+}
+
+.biz-switcher:focus {
+  outline: 2px solid #fff;
+  outline-offset: 2px;
+  border-radius: 6px;
+}
+
+.biz-switcher option {
+  color: var(--ink);
+  font-weight: 600;
+  font-size: 15px;
+}
+
+/* ---------- friendly empty states ---------- */
+
+.empty-state {
+  text-align: center;
+  padding: 32px 16px;
+}
+
+.empty-state .empty-icon {
+  font-size: 48px;
+  margin-bottom: 12px;
+}
+
+.empty-state h3 {
+  margin: 0 0 8px;
+  font-size: 19px;
+}
+
+.empty-state p {
+  color: var(--ink-soft);
+  max-width: 480px;
+  margin: 0 auto 20px;
+  line-height: 1.55;
+}
+
+/* ---------- guided tour ---------- */
+
+.tour-highlight {
+  position: relative;
+  z-index: 60;
+  outline: 3px solid var(--blue);
+  outline-offset: 3px;
+  border-radius: 8px;
+}
+
+.tour-card {
+  position: fixed;
+  z-index: 70;
+  background: var(--card);
+  border-radius: var(--radius);
+  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.25);
+  padding: 18px 20px;
+}
+
+.tour-card h3 {
+  margin: 0 0 6px;
+  font-size: 17px;
+}
+
+.tour-card p {
+  margin: 0 0 14px;
+  color: var(--ink-soft);
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+.tour-step {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--ink-faint);
+  margin-bottom: 6px;
+}
+
+.tour-actions {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 10px;
+}
+
+.tour-actions > div {
+  display: flex;
+  gap: 8px;
+}
+
+/* ---------- help panel ---------- */
+
+.modal-pad {
+  padding: 28px;
+}
+
+.help-section {
+  margin-bottom: 18px;
+}
+
+.help-section h3 {
+  margin: 0 0 6px;
+  font-size: 16px;
+}
+
+.help-section p {
+  margin: 0;
+  color: var(--ink-soft);
+  font-size: 14px;
+  line-height: 1.55;
+}
+
+/* ---------- insights ---------- */
+
+.insight-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.insight-list li {
+  font-size: 15px;
+  line-height: 1.5;
+}
+
+/* ---------- reminders toggle ---------- */
+
+.switch {
+  position: relative;
+  width: 54px;
+  height: 30px;
+  border: none;
+  border-radius: 999px;
+  background: var(--border);
+  cursor: pointer;
+  transition: background 0.15s;
+  flex-shrink: 0;
+  padding: 0;
+}
+
+.switch.on {
+  background: var(--green);
+}
+
+.switch::after {
+  content: "";
+  position: absolute;
+  top: 3px;
+  left: 3px;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background: #fff;
+  box-shadow: var(--shadow);
+  transition: left 0.15s;
+}
+
+.switch.on::after {
+  left: 27px;
+}
+
+/* ---------- businesses list ---------- */
+
+.biz-list {
+  margin: 8px 0 4px;
+  border-top: 1px solid var(--border);
+}

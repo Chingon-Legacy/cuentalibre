@@ -4,11 +4,15 @@ import {
   useContext,
   useEffect,
   useMemo,
+  useRef,
   useState,
 } from "react";
-import { LangProvider, useStrings, type Strings } from "./i18n";
+import { LangProvider, strings, useStrings, type Strings } from "./i18n";
 import {
+  addBusiness,
+  deleteBusiness,
   getBills,
+  getBusinesses,
   getContractorPayments,
   getContractors,
   getExpenses,
@@ -16,13 +20,16 @@ import {
   getQuotes,
   getSetting,
   initDb,
+  setActiveBusinessId,
   setSetting,
+  updateBusiness,
   generateRecurringInvoices,
 } from "./db";
 import { getPack } from "./data/categories";
 import type { CategoryPack } from "./data/categories/types";
 import type {
   Bill,
+  Business,
   Contractor,
   ContractorPayment,
   Expense,
@@ -31,6 +38,10 @@ import type {
   Quote,
   Screen,
 } from "./types";
+import { checkDueReminders, type ReminderStrings } from "./notify";
+import Tour, { type TourStep } from "./components/Tour";
+import HelpPanel from "./components/HelpPanel";
+import AddBusinessModal from "./components/AddBusinessModal";
 import Onboarding from "./screens/Onboarding";
 import Home from "./screens/Home";
 import Invoices from "./screens/Invoices";
@@ -59,37 +70,52 @@ export function useLangState(): LangState {
 }
 
 export interface BizState {
+  /** Every business the user owns. */
+  businesses: Business[];
+  /** The id of the business whose data is on screen. */
+  activeId: number | null;
+  /** The active business row, or null while loading. */
+  active: Business | null;
+  /** Switch to another business (persists the choice, refreshes data). */
+  switchBusiness: (id: number) => Promise<void>;
+  /** Create a business and switch to it. */
+  addBusinessFlow: (name: string, type: string, state: string) => Promise<Business>;
+  /** Rename / retype / restate the active business. */
+  updateActiveBusiness: (input: { name: string; type: string; state: string }) => Promise<void>;
+  /** Delete the active business and everything in it (only when >1 exist). */
+  deleteActiveBusiness: () => Promise<void>;
+  /** After a backup restore: reload businesses, re-pick active, refresh data. */
+  resyncAfterRestore: () => Promise<void>;
+  // Backwards-compatible shorthands so screens keep working.
+  /** Active business's type id (selects the category pack). */
   biz: string;
-  setBiz: (id: string) => void;
-  pack: CategoryPack;
+  /** Active business's state code. */
   stateCode: string;
-  setStateCode: (c: string) => void;
+  /** Active business's category pack. */
+  pack: CategoryPack;
+  /** Active business's display name. */
+  bizName: string;
 }
 
 const BizContext = createContext<BizState>({
+  businesses: [],
+  activeId: null,
+  active: null,
+  switchBusiness: async () => undefined,
+  addBusinessFlow: async () => {
+    throw new Error("businesses not ready");
+  },
+  updateActiveBusiness: async () => undefined,
+  deleteActiveBusiness: async () => undefined,
+  resyncAfterRestore: async () => undefined,
   biz: "freelancer",
-  setBiz: () => undefined,
-  pack: getPack("freelancer"),
   stateCode: "",
-  setStateCode: () => undefined,
+  pack: getPack("freelancer"),
+  bizName: "",
 });
 
 export function useBiz(): BizState {
   return useContext(BizContext);
-}
-
-interface BizNameState {
-  bizName: string;
-  setBizName: (n: string) => void;
-}
-
-const BizNameContext = createContext<BizNameState>({
-  bizName: "",
-  setBizName: () => undefined,
-});
-
-export function useBizName(): BizNameState {
-  return useContext(BizNameContext);
 }
 
 /* ---------- header / nav ---------- */
@@ -123,68 +149,142 @@ function LangToggle() {
   );
 }
 
-function Shell({ setBiz }: { setBiz: (id: string) => void }) {
+/** Header brand: a business switcher when there are several, the plain name when one. */
+function Brand() {
   const t = useStrings();
-  const { bizName, setBizName } = useBizName();
-  const { setStateCode } = useBiz();
-  const [screen, setScreen] = useState<Screen>("home");
-  const [invoices, setInvoices] = useState<Invoice[]>([]);
-  const [expenses, setExpenses] = useState<Expense[]>([]);
-  const [bills, setBills] = useState<Bill[]>([]);
-  const [quotes, setQuotes] = useState<Quote[]>([]);
-  const [contractors, setContractors] = useState<Contractor[]>([]);
-  const [contractorPayments, setContractorPayments] = useState<ContractorPayment[]>([]);
-  const [ready, setReady] = useState(false);
+  const { businesses, activeId, bizName, switchBusiness } = useBiz();
+  const [showAdd, setShowAdd] = useState(false);
 
-  const refresh = useCallback(async () => {
-    const [inv, exp, bl, qu, co, cp] = await Promise.all([
-      getInvoices(),
-      getExpenses(),
-      getBills(),
-      getQuotes(),
-      getContractors(),
-      getContractorPayments(),
-    ]);
-    setInvoices(inv);
-    setExpenses(exp);
-    setBills(bl);
-    setQuotes(qu);
-    setContractors(co);
-    setContractorPayments(cp);
+  if (businesses.length > 1) {
+    return (
+      <div className="brand">
+        <span className="brand-mark">CL</span>
+        <select
+          className="biz-switcher"
+          value={showAdd ? "__add" : String(activeId ?? "")}
+          aria-label={t.header.addBusiness}
+          onChange={(e) => {
+            const v = e.target.value;
+            if (v === "__add") {
+              setShowAdd(true);
+            } else {
+              switchBusiness(Number(v)).catch(() => undefined);
+            }
+          }}
+        >
+          {businesses.map((b) => (
+            <option key={b.id} value={b.id}>
+              {b.name}
+            </option>
+          ))}
+          <option value="__add">{t.header.addBusiness}</option>
+        </select>
+        {showAdd && <AddBusinessModal onClose={() => setShowAdd(false)} />}
+      </div>
+    );
+  }
+
+  return (
+    <div className="brand">
+      <span className="brand-mark">CL</span>
+      <span>
+        {bizName || "CuentaLibre"}
+        <div className="tagline">{bizName ? "CuentaLibre" : t.tagline}</div>
+      </span>
+    </div>
+  );
+}
+
+interface AppData {
+  invoices: Invoice[];
+  expenses: Expense[];
+  bills: Bill[];
+  quotes: Quote[];
+  contractors: Contractor[];
+  contractorPayments: ContractorPayment[];
+}
+
+const EMPTY_DATA: AppData = {
+  invoices: [],
+  expenses: [],
+  bills: [],
+  quotes: [],
+  contractors: [],
+  contractorPayments: [],
+};
+
+function Shell({
+  data,
+  refresh,
+  ready,
+}: {
+  data: AppData;
+  refresh: () => Promise<void>;
+  ready: boolean;
+}) {
+  const t = useStrings();
+  const [screen, setScreen] = useState<Screen>("home");
+  const [helpOpen, setHelpOpen] = useState(false);
+  const [tourOpen, setTourOpen] = useState(false);
+
+  // Friendly guide mode: show the tour once, unless it was seen or skipped.
+  useEffect(() => {
+    if (!ready) return;
+    let cancelled = false;
+    getSetting("tourSeen")
+      .then((seen) => {
+        if (!cancelled && seen !== "1") setTourOpen(true);
+      })
+      .catch(() => undefined);
+    return () => {
+      cancelled = true;
+    };
+  }, [ready]);
+
+  const closeTour = useCallback(async () => {
+    setTourOpen(false);
+    try {
+      await setSetting("tourSeen", "1");
+    } catch {
+      // Not fatal — the tour just shows again next launch.
+    }
   }, []);
 
-  useEffect(() => {
-    initDb()
-      .then(() => generateRecurringInvoices())
-      .then(refresh)
-      .then(() => getSetting("businessType"))
-      .then((saved) => {
-        // A restored backup may carry a business type — honor it.
-        if (saved) setBiz(saved);
-        return getSetting("businessName");
-      })
-      .then((savedName) => {
-        if (savedName) setBizName(savedName);
-        return getSetting("businessState");
-      })
-      .then((savedState) => {
-        // A restored backup may carry a business state — honor it.
-        if (savedState) setStateCode(savedState);
-      })
-      .catch(() => undefined)
-      .finally(() => setReady(true));
-  }, [refresh, setBiz, setBizName, setStateCode]);
+  const tourSteps: TourStep[] = useMemo(
+    () => [
+      {
+        selector: ".main-nav, .mobile-nav",
+        title: t.tour.stepNavT,
+        body: t.tour.stepNavB,
+      },
+      {
+        selector: ".stat-grid",
+        title: t.tour.stepTotalsT,
+        body: t.tour.stepTotalsB,
+      },
+      {
+        selector: ".tour-new-invoice",
+        title: t.tour.stepNewInvoiceT,
+        body: t.tour.stepNewInvoiceB,
+      },
+      {
+        selector: ".app-header .lang-toggle",
+        title: t.tour.stepLangT,
+        body: t.tour.stepLangB,
+      },
+      {
+        selector: ".help-btn",
+        title: t.tour.stepHelpT,
+        body: t.tour.stepHelpB,
+      },
+    ],
+    [t]
+  );
 
   return (
     <>
       <header className="app-header">
-        <div className="brand">
-          <span className="brand-mark">CL</span>
-          <span>
-            {bizName || "CuentaLibre"}
-            <div className="tagline">{bizName ? "CuentaLibre" : t.tagline}</div>
-          </span>
-        </div>
+        <Brand />
         <nav className="main-nav">
           {NAV_ITEMS.map((item) => (
             <button
@@ -196,35 +296,51 @@ function Shell({ setBiz }: { setBiz: (id: string) => void }) {
             </button>
           ))}
         </nav>
-        <LangToggle />
+        <div className="header-tools">
+          <button
+            type="button"
+            className="help-btn"
+            onClick={() => setHelpOpen(true)}
+            aria-label={t.help.title}
+            title={t.help.title}
+          >
+            ?
+          </button>
+          <LangToggle />
+        </div>
       </header>
 
       <main>
         {ready && screen === "home" && (
-          <Home invoices={invoices} expenses={expenses} bills={bills} go={setScreen} />
+          <Home invoices={data.invoices} expenses={data.expenses} bills={data.bills} go={setScreen} />
         )}
         {ready && screen === "invoices" && (
-          <Invoices invoices={invoices} refresh={refresh} />
+          <Invoices invoices={data.invoices} refresh={refresh} />
         )}
         {ready && screen === "quotes" && (
-          <Quotes quotes={quotes} refresh={refresh} />
+          <Quotes quotes={data.quotes} refresh={refresh} />
         )}
         {ready && screen === "bills" && (
-          <Bills bills={bills} refresh={refresh} />
+          <Bills bills={data.bills} refresh={refresh} />
         )}
         {ready && screen === "expenses" && (
-          <Expenses expenses={expenses} refresh={refresh} />
+          <Expenses expenses={data.expenses} refresh={refresh} />
         )}
-        {ready && screen === "customers" && <Customers invoices={invoices} />}
+        {ready && screen === "customers" && <Customers invoices={data.invoices} />}
         {ready && screen === "contractors" && (
           <Contractors
-            contractors={contractors}
-            payments={contractorPayments}
+            contractors={data.contractors}
+            payments={data.contractorPayments}
             refresh={refresh}
           />
         )}
         {ready && screen === "reports" && (
-          <Reports invoices={invoices} expenses={expenses} />
+          <Reports
+            invoices={data.invoices}
+            expenses={data.expenses}
+            contractors={data.contractors}
+            contractorPayments={data.contractorPayments}
+          />
         )}
         {ready && screen === "settings" && <Settings refresh={refresh} />}
       </main>
@@ -241,29 +357,44 @@ function Shell({ setBiz }: { setBiz: (id: string) => void }) {
           </button>
         ))}
       </nav>
+
+      {helpOpen && <HelpPanel onClose={() => setHelpOpen(false)} />}
+      {tourOpen && ready && <Tour steps={tourSteps} onDone={closeTour} />}
     </>
   );
+}
+
+function reminderStrings(t: Strings): ReminderStrings {
+  return {
+    title: t.reminders.title,
+    invDueSoonOne: t.reminders.invDueSoonOne,
+    invDueSoon: t.reminders.invDueSoon,
+    invOverdueOne: t.reminders.invOverdueOne,
+    invOverdue: t.reminders.invOverdue,
+    billDueSoonOne: t.reminders.billDueSoonOne,
+    billDueSoon: t.reminders.billDueSoon,
+    billOverdueOne: t.reminders.billOverdueOne,
+    billOverdue: t.reminders.billOverdue,
+  };
 }
 
 /* ---------- app root ---------- */
 
 export default function App() {
-  const [lang, setLangState] = useState<Lang>(() => {
-    const saved = localStorage.getItem("cl-lang");
-    return saved === "es" ? "es" : "en";
-  });
-  const [biz, setBizState] = useState<string>(
-    () => localStorage.getItem("cl-biz") ?? "freelancer"
-  );
-  const [bizName, setBizNameState] = useState<string>(
-    () => localStorage.getItem("cl-bizname") ?? ""
-  );
-  const [stateCode, setStateCodeState] = useState<string>(
-    () => localStorage.getItem("cl-bizstate") ?? ""
+  const [lang, setLangState] = useState<Lang>(() =>
+    localStorage.getItem("cl-lang") === "es" ? "es" : "en"
   );
   const [onboarded, setOnboarded] = useState<boolean>(
     () => localStorage.getItem("cl-onboarded") === "1"
   );
+  const [businesses, setBusinesses] = useState<Business[]>([]);
+  const [activeId, setActiveId] = useState<number | null>(() => {
+    const n = Number(localStorage.getItem("cl-activebiz"));
+    return Number.isFinite(n) && n > 0 ? n : null;
+  });
+  const [data, setData] = useState<AppData>(EMPTY_DATA);
+  const [ready, setReady] = useState(false);
+  const startedRef = useRef(false);
 
   const setLang = useCallback((l: Lang) => {
     setLangState(l);
@@ -271,49 +402,194 @@ export default function App() {
     document.documentElement.lang = l;
   }, []);
 
-  const setBiz = useCallback((id: string) => {
-    setBizState(id);
-    localStorage.setItem("cl-biz", id);
-    setSetting("businessType", id).catch(() => undefined);
+  /** Reloads every money list for the active business. */
+  const refreshData = useCallback(async (): Promise<AppData> => {
+    const [invoices, expenses, bills, quotes, contractors, contractorPayments] =
+      await Promise.all([
+        getInvoices(),
+        getExpenses(),
+        getBills(),
+        getQuotes(),
+        getContractors(),
+        getContractorPayments(),
+      ]);
+    const next = { invoices, expenses, bills, quotes, contractors, contractorPayments };
+    setData(next);
+    return next;
   }, []);
 
-  const setBizName = useCallback((n: string) => {
-    setBizNameState(n);
-    localStorage.setItem("cl-bizname", n);
-    setSetting("businessName", n).catch(() => undefined);
+  const refresh = useCallback((): Promise<void> => {
+    return refreshData().then(() => undefined);
+  }, [refreshData]);
+
+  /** Picks the active business: the stored choice when it still exists, else the first. */
+  const pickActive = useCallback((list: Business[]): number | null => {
+    if (list.length === 0) return null;
+    const stored = Number(localStorage.getItem("cl-activebiz"));
+    const id = list.some((b) => b.id === stored) ? stored : list[0].id;
+    setActiveBusinessId(id);
+    setActiveId(id);
+    localStorage.setItem("cl-activebiz", String(id));
+    return id;
   }, []);
 
-  const setStateCode = useCallback((c: string) => {
-    setStateCodeState(c);
-    localStorage.setItem("cl-bizstate", c);
-    setSetting("businessState", c).catch(() => undefined);
-  }, []);
+  const switchBusiness = useCallback(
+    async (id: number) => {
+      setActiveBusinessId(id);
+      setActiveId(id);
+      localStorage.setItem("cl-activebiz", String(id));
+      await refreshData();
+    },
+    [refreshData]
+  );
 
+  const addBusinessFlow = useCallback(
+    async (name: string, type: string, state: string): Promise<Business> => {
+      const id = await addBusiness({ name, type, state });
+      const list = await getBusinesses();
+      setBusinesses(list);
+      const created = list.find((b) => b.id === id);
+      if (!created) throw new Error("business was not created");
+      setActiveBusinessId(id);
+      setActiveId(id);
+      localStorage.setItem("cl-activebiz", String(id));
+      await refreshData();
+      return created;
+    },
+    [refreshData]
+  );
+
+  const updateActiveBusiness = useCallback(
+    async (input: { name: string; type: string; state: string }) => {
+      if (activeId == null) return;
+      await updateBusiness(activeId, input);
+      setBusinesses(await getBusinesses());
+    },
+    [activeId]
+  );
+
+  const deleteActiveBusiness = useCallback(async () => {
+    if (activeId == null || businesses.length <= 1) return;
+    await deleteBusiness(activeId);
+    const list = await getBusinesses();
+    setBusinesses(list);
+    if (list.length > 0) {
+      const next = list[0];
+      setActiveBusinessId(next.id);
+      setActiveId(next.id);
+      localStorage.setItem("cl-activebiz", String(next.id));
+    }
+    await refreshData();
+  }, [activeId, businesses.length, refreshData]);
+
+  /** After a backup restore: reload businesses, re-pick active, refresh data. */
+  const resyncAfterRestore = useCallback(async () => {
+    const list = await getBusinesses();
+    setBusinesses(list);
+    pickActive(list);
+    await refreshData();
+  }, [pickActive, refreshData]);
+
+  const active = useMemo(
+    () => businesses.find((b) => b.id === activeId) ?? null,
+    [businesses, activeId]
+  );
+  const biz = active?.type ?? "freelancer";
+  const stateCode = active?.state ?? "";
+  const bizName = active?.name ?? "";
   const pack = useMemo(() => getPack(biz), [biz]);
 
+  const bizValue = useMemo<BizState>(
+    () => ({
+      businesses,
+      activeId,
+      active,
+      switchBusiness,
+      addBusinessFlow,
+      updateActiveBusiness,
+      deleteActiveBusiness,
+      resyncAfterRestore,
+      biz,
+      stateCode,
+      pack,
+      bizName,
+    }),
+    [
+      businesses,
+      activeId,
+      active,
+      switchBusiness,
+      addBusinessFlow,
+      updateActiveBusiness,
+      deleteActiveBusiness,
+      resyncAfterRestore,
+      biz,
+      stateCode,
+      pack,
+      bizName,
+    ]
+  );
+
+  // Startup: init → pick active business → recurring invoices → data → reminders.
+  useEffect(() => {
+    if (startedRef.current) return;
+    startedRef.current = true;
+    (async () => {
+      try {
+        await initDb();
+        const list = await getBusinesses();
+        setBusinesses(list);
+        // The active business must be set before generateRecurringInvoices()
+        // so it only processes this business's templates.
+        pickActive(list);
+        await generateRecurringInvoices();
+        const loaded = await refreshData();
+        const remindersOn = await getSetting("remindersOn");
+        if (remindersOn !== "0") {
+          await checkDueReminders(
+            loaded.invoices,
+            loaded.bills,
+            reminderStrings(strings[lang])
+          );
+        }
+      } catch {
+        // Startup problems must never trap the user on a blank screen.
+      } finally {
+        setReady(true);
+      }
+    })();
+    // Runs once on mount by design.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   const finishOnboarding = useCallback(
-    (l: Lang, name: string, id: string, sc: string) => {
+    async (l: Lang, name: string, type: string, sc: string) => {
       setLang(l);
-      setBizName(name);
-      setBiz(id);
-      setStateCode(sc);
+      const id = await addBusiness({ name, type, state: sc });
+      setActiveBusinessId(id);
+      setActiveId(id);
+      localStorage.setItem("cl-activebiz", String(id));
+      setBusinesses(await getBusinesses());
+      const loaded = await refreshData();
       localStorage.setItem("cl-onboarded", "1");
       setOnboarded(true);
+      const remindersOn = await getSetting("remindersOn");
+      if (remindersOn !== "0") {
+        await checkDueReminders(loaded.invoices, loaded.bills, reminderStrings(strings[l]));
+      }
     },
-    [setLang, setBizName, setBiz, setStateCode]
+    [setLang, refreshData]
   );
 
   return (
     <LangStateContext.Provider value={{ lang, setLang }}>
       <LangProvider value={lang}>
-        <BizContext.Provider value={{ biz, setBiz, pack, stateCode, setStateCode }}>
-          <BizNameContext.Provider value={{ bizName, setBizName }}>
+        <BizContext.Provider value={bizValue}>
           {!onboarded ? (
             <Onboarding onDone={finishOnboarding} />
           ) : (
-            <Shell setBiz={setBiz} />
+            <Shell data={data} refresh={refresh} ready={ready} />
           )}
-          </BizNameContext.Provider>
         </BizContext.Provider>
       </LangProvider>
     </LangStateContext.Provider>
