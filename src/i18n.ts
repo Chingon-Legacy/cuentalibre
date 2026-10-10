@@ -406,6 +406,15 @@ const en = {
       "Many self-employed people set aside 25–30% of income for taxes.",
     lastBackup: "Last saved: {date}",
     neverBackedUp: "You haven't saved a backup yet.",
+    acctTitle: "Accounting method",
+    acctCash: "Cash",
+    acctCashDesc:
+      "Count money when it arrives. An invoice counts as income when your customer pays it.",
+    acctAccrual: "Accrual",
+    acctAccrualDesc:
+      "Count money when you bill it. An invoice counts as income when you send it, even if they haven't paid yet.",
+    acctGuidance:
+      "Use the same method as your tax return. If you're not sure, ask your preparer — switching methods mid-year can cause tax headaches.",
   },
 
   common: {
@@ -550,6 +559,12 @@ const en = {
     milesLabel: "miles",
     total: "Total",
     preparedNote: "Prepared with CuentaLibre. Take this to your tax preparer.",
+    methodL: "Accounting method",
+    methodCash: "Cash basis",
+    methodAccrual: "Accrual basis",
+    incomeAccrual: "Income — money you billed your customers",
+    unpaidNoteAccrual:
+      "These weren't paid yet, but they count as income this year because you use the accrual method.",
   },
 
   addbiz: {
@@ -1252,6 +1267,15 @@ const es: typeof en = {
       "Muchos trabajadores por cuenta propia apartan el 25–30% de sus ingresos para impuestos.",
     lastBackup: "Último respaldo: {date}",
     neverBackedUp: "Aún no has guardado un respaldo.",
+    acctTitle: "Método de contabilidad",
+    acctCash: "Efectivo",
+    acctCashDesc:
+      "Cuenta el dinero cuando llega. Una factura cuenta como ingreso cuando tu cliente la paga.",
+    acctAccrual: "Devengo",
+    acctAccrualDesc:
+      "Cuenta el dinero cuando lo facturas. Una factura cuenta como ingreso cuando la envías, aunque aún no te hayan pagado.",
+    acctGuidance:
+      "Usa el mismo método que tu declaración de impuestos. Si no estás seguro, pregúntale a tu preparador — cambiar de método a mitad de año puede causar problemas con los impuestos.",
   },
 
   common: {
@@ -1396,6 +1420,12 @@ const es: typeof en = {
     milesLabel: "millas",
     total: "Total",
     preparedNote: "Preparado con CuentaLibre. Llévalo a tu preparador de impuestos.",
+    methodL: "Método de contabilidad",
+    methodCash: "Base de efectivo",
+    methodAccrual: "Base de devengo",
+    incomeAccrual: "Ingresos — dinero que facturaste a tus clientes",
+    unpaidNoteAccrual:
+      "Aún no fueron pagadas, pero cuentan como ingresos este año porque usas el método de devengo.",
   },
 
   addbiz: {

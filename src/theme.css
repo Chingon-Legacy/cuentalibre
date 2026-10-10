@@ -152,6 +152,41 @@ body {
   color: #fff;
 }
 
+/* Accounting-method radio cards (Settings). */
+.radio-cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 12px;
+  margin: 12px 0;
+}
+
+.radio-card {
+  text-align: left;
+  background: var(--card);
+  border: 2px solid var(--border);
+  border-radius: 12px;
+  padding: 14px 16px;
+  cursor: pointer;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease, background 0.15s ease;
+}
+
+.radio-card:hover {
+  border-color: var(--blue);
+}
+
+.radio-card.selected {
+  border-color: var(--blue);
+  background: var(--blue-light);
+  box-shadow: 0 0 0 1px var(--blue);
+}
+
+.radio-card .radio-title {
+  font-weight: 800;
+  font-size: 16px;
+  margin-bottom: 4px;
+  color: var(--ink);
+}
+
 /* ---------- more menu (nav polish) ---------- */
 
 .more-wrap {

@@ -1,5 +1,6 @@
 import Database from "@tauri-apps/plugin-sql";
 import type {
+  AccountingMethod,
   BackupData,
   Bill,
   Business,
@@ -25,8 +26,13 @@ let dbPromise: Promise<Database> | null = null;
 
 function getDb(): Promise<Database> {
   if (!dbPromise) {
-    // Stored in the app's local data folder on the user's computer.
-    dbPromise = Database.load("sqlite:cuentalibre.db");
+    // TEMP-QA-MOCK (revert after QA): in a plain browser there is no Tauri
+    // SQL plugin, so use an in-memory sql.js database.
+    dbPromise = (async () => {
+      const { isTauri, getBrowserDb } = await import("./shot-mock");
+      if (!isTauri()) return (await getBrowserDb()) as unknown as Database;
+      return Database.load("sqlite:cuentalibre.db");
+    })();
   }
   return dbPromise;
 }
@@ -139,6 +145,7 @@ export async function initDb(): Promise<void> {
       name TEXT NOT NULL,
       type TEXT NOT NULL DEFAULT 'freelancer',
       entity_type TEXT NOT NULL DEFAULT 'forprofit',
+      accounting_method TEXT NOT NULL DEFAULT 'cash',
       state TEXT NOT NULL DEFAULT '',
       ein TEXT NOT NULL DEFAULT '',
       fiscal_year_end INTEGER NOT NULL DEFAULT 12,
@@ -316,8 +323,10 @@ export async function initDb(): Promise<void> {
     }
   }
   // Nonprofit support: existing businesses default to for-profit.
+  // Accounting method: existing businesses default to cash.
   const bizCols: [string, string][] = [
     ["entity_type", "TEXT NOT NULL DEFAULT 'forprofit'"],
+    ["accounting_method", "TEXT NOT NULL DEFAULT 'cash'"],
     ["ein", "TEXT NOT NULL DEFAULT ''"],
     ["fiscal_year_end", "INTEGER NOT NULL DEFAULT 12"],
     ["mission", "TEXT NOT NULL DEFAULT ''"],
@@ -430,13 +439,23 @@ export async function addBusiness(input: {
   type: string;
   state: string;
   entity_type?: EntityType;
+  accounting_method?: AccountingMethod;
 }): Promise<number> {
   const db = await getDb();
   const res = await db.execute(
-    "INSERT INTO businesses (name, type, entity_type, state, created_at) VALUES ($1, $2, $3, $4, $5)",
-    [input.name, input.type, input.entity_type ?? "forprofit", input.state, new Date().toISOString()]
+    "INSERT INTO businesses (name, type, entity_type, accounting_method, state, created_at) VALUES ($1, $2, $3, $4, $5, $6)",
+    [input.name, input.type, input.entity_type ?? "forprofit", input.accounting_method ?? "cash", input.state, new Date().toISOString()]
   );
   return Number(res.lastInsertId ?? 0);
+}
+
+/** Sets a business's accounting method (cash or accrual). */
+export async function updateAccountingMethod(
+  id: number,
+  method: AccountingMethod
+): Promise<void> {
+  const db = await getDb();
+  await db.execute("UPDATE businesses SET accounting_method = $1 WHERE id = $2", [method, id]);
 }
 
 /** Updates a nonprofit's IRS-facing fields (EIN, fiscal year end, mission). */
@@ -1096,12 +1115,13 @@ export async function importBackup(data: BackupData): Promise<void> {
     // v2 backup: explicit ids preserve every link.
     for (const b of data.businesses) {
       await db.execute(
-        "INSERT INTO businesses (id, name, type, entity_type, state, ein, fiscal_year_end, mission, created_at) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)",
+        "INSERT INTO businesses (id, name, type, entity_type, accounting_method, state, ein, fiscal_year_end, mission, created_at) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)",
         [
           b.id,
           b.name,
           b.type ?? "freelancer",
           b.entity_type ?? "forprofit",
+          b.accounting_method ?? "cash",
           b.state ?? "",
           b.ein ?? "",
           b.fiscal_year_end ?? 12,
@@ -1113,11 +1133,12 @@ export async function importBackup(data: BackupData): Promise<void> {
   } else {
     // v1 backup (pre-multi-business): fold into one business.
     const res = await db.execute(
-      "INSERT INTO businesses (name, type, entity_type, state, created_at) VALUES ($1, $2, $3, $4, $5)",
+      "INSERT INTO businesses (name, type, entity_type, accounting_method, state, created_at) VALUES ($1, $2, $3, $4, $5, $6)",
       [
         data.businessName || "Business 1",
         data.businessType || "freelancer",
         "forprofit",
+        "cash",
         (data as { businessState?: string }).businessState || "",
         new Date().toISOString(),
       ]

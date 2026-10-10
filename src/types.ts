@@ -26,11 +26,15 @@ export type PayMethod = "cash" | "card" | "transfer" | "check";
 
 export type EntityType = "forprofit" | "nonprofit";
 
+/** How the business counts income/expenses: when money moves (cash) or when billed (accrual). */
+export type AccountingMethod = "cash" | "accrual";
+
 export interface Business {
   id: number;
   name: string;
   type: string; // business-type id, selects the category pack ('nonprofit' for nonprofits)
   entity_type: EntityType;
+  accounting_method: AccountingMethod; // 'cash' (default) or 'accrual'
   state: string; // US state code, e.g. "IN"
   ein: string; // nonprofit: Employer Identification Number
   fiscal_year_end: number; // nonprofit: month (1-12) the fiscal year ends

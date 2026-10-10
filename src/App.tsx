@@ -28,6 +28,7 @@ import {
   initDb,
   setActiveBusinessId,
   setSetting,
+  updateAccountingMethod,
   updateBusiness,
   updateNonprofitFields,
   generateRecurringExpenses,
@@ -36,6 +37,7 @@ import {
 import { getPack } from "./data/categories";
 import type { CategoryPack } from "./data/categories/types";
 import type {
+  AccountingMethod,
   Bill,
   Business,
   Contractor,
@@ -106,6 +108,8 @@ export interface BizState {
   updateActiveBusiness: (input: { name: string; type: string; state: string }) => Promise<void>;
   /** Update the active nonprofit's EIN, fiscal year end, and mission. */
   updateActiveNonprofit: (input: { ein: string; fiscal_year_end: number; mission: string }) => Promise<void>;
+  /** Switch the active business between cash and accrual accounting. */
+  updateActiveAccountingMethod: (method: AccountingMethod) => Promise<void>;
   /** Delete the active business and everything in it (only when >1 exist). */
   deleteActiveBusiness: () => Promise<void>;
   /** After a backup restore: reload businesses, re-pick active, refresh data. */
@@ -117,6 +121,8 @@ export interface BizState {
   stateCode: string;
   /** True when the active business is a nonprofit organization. */
   isNonprofit: boolean;
+  /** The active business's accounting method ('cash' when unknown). */
+  accountingMethod: AccountingMethod;
   /** Active business's category pack. */
   pack: CategoryPack;
   /** Active business's display name. */
@@ -133,11 +139,13 @@ const BizContext = createContext<BizState>({
   },
   updateActiveBusiness: async () => undefined,
   updateActiveNonprofit: async () => undefined,
+  updateActiveAccountingMethod: async () => undefined,
   deleteActiveBusiness: async () => undefined,
   resyncAfterRestore: async () => undefined,
   biz: "freelancer",
   stateCode: "",
   isNonprofit: false,
+  accountingMethod: "cash",
   pack: getPack("freelancer"),
   bizName: "",
 });
@@ -509,6 +517,7 @@ function Shell({
           <Reports
             invoices={data.invoices}
             expenses={data.expenses}
+            bills={data.bills}
             contractors={data.contractors}
             contractorPayments={data.contractorPayments}
             trips={data.trips}
@@ -623,6 +632,9 @@ export default function App() {
     return refreshData().then(() => undefined);
   }, [refreshData]);
 
+  // TEMP-QA-MOCK (revert after QA): let the harness refresh UI after seeding.
+  (window as any).__refresh = refresh;
+
   /** Picks the active business: the stored choice when it still exists, else the first. */
   const pickActive = useCallback((list: Business[]): number | null => {
     if (list.length === 0) return null;
@@ -678,6 +690,15 @@ export default function App() {
     [activeId]
   );
 
+  const updateActiveAccountingMethod = useCallback(
+    async (method: AccountingMethod) => {
+      if (activeId == null) return;
+      await updateAccountingMethod(activeId, method);
+      setBusinesses(await getBusinesses());
+    },
+    [activeId]
+  );
+
   const deleteActiveBusiness = useCallback(async () => {
     if (activeId == null || businesses.length <= 1) return;
     await deleteBusiness(activeId);
@@ -708,6 +729,7 @@ export default function App() {
   const stateCode = active?.state ?? "";
   const bizName = active?.name ?? "";
   const isNonprofit = active?.entity_type === "nonprofit";
+  const accountingMethod: AccountingMethod = active?.accounting_method ?? "cash";
   const pack = useMemo(() => getPack(biz), [biz]);
 
   const bizValue = useMemo<BizState>(
@@ -719,11 +741,13 @@ export default function App() {
       addBusinessFlow,
       updateActiveBusiness,
       updateActiveNonprofit,
+      updateActiveAccountingMethod,
       deleteActiveBusiness,
       resyncAfterRestore,
       biz,
       stateCode,
       isNonprofit,
+      accountingMethod,
       pack,
       bizName,
     }),
@@ -735,11 +759,13 @@ export default function App() {
       addBusinessFlow,
       updateActiveBusiness,
       updateActiveNonprofit,
+      updateActiveAccountingMethod,
       deleteActiveBusiness,
       resyncAfterRestore,
       biz,
       stateCode,
       isNonprofit,
+      accountingMethod,
       pack,
       bizName,
     ]

@@ -6,7 +6,7 @@ import { businessTypes } from "../data/categories";
 import { US_STATES } from "../data/us-states";
 import { fmtDate, useLang, useStrings } from "../i18n";
 import AddBusinessModal from "../components/AddBusinessModal";
-import type { Business, Lang } from "../types";
+import type { AccountingMethod, Business, Lang } from "../types";
 
 const APP_VERSION = "0.1.0";
 
@@ -29,8 +29,10 @@ export default function Settings({ refresh }: { refresh: () => Promise<void> }) 
     active,
     activeId,
     isNonprofit,
+    accountingMethod,
     updateActiveBusiness,
     updateActiveNonprofit,
+    updateActiveAccountingMethod,
     deleteActiveBusiness,
     resyncAfterRestore,
   } = useBiz();
@@ -167,6 +169,11 @@ export default function Settings({ refresh }: { refresh: () => Promise<void> }) 
   const saveState = (state: string) => {
     if (!active || state === active.state) return;
     updateActiveBusiness({ name: active.name, type: active.type, state }).catch(() => undefined);
+  };
+
+  const saveMethod = (m: AccountingMethod) => {
+    if (m === accountingMethod) return;
+    updateActiveAccountingMethod(m).catch(() => undefined);
   };
 
   const removeBiz = async (b: Business) => {
@@ -486,6 +493,31 @@ export default function Settings({ refresh }: { refresh: () => Promise<void> }) 
           </button>
         </div>
         {showAddBiz && <AddBusinessModal onClose={() => setShowAddBiz(false)} />}
+      </div>
+
+      <div className="panel">
+        <h2>📒 {t.settings.acctTitle}</h2>
+        <div className="radio-cards">
+          <button
+            type="button"
+            className={`radio-card${accountingMethod === "cash" ? " selected" : ""}`}
+            aria-pressed={accountingMethod === "cash"}
+            onClick={() => saveMethod("cash")}
+          >
+            <div className="radio-title">{t.settings.acctCash}</div>
+            <div className="desc">{t.settings.acctCashDesc}</div>
+          </button>
+          <button
+            type="button"
+            className={`radio-card${accountingMethod === "accrual" ? " selected" : ""}`}
+            aria-pressed={accountingMethod === "accrual"}
+            onClick={() => saveMethod("accrual")}
+          >
+            <div className="radio-title">{t.settings.acctAccrual}</div>
+            <div className="desc">{t.settings.acctAccrualDesc}</div>
+          </button>
+        </div>
+        <p className="disclaimer">{t.settings.acctGuidance}</p>
       </div>
 
       <div className="panel">

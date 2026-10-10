@@ -17,12 +17,18 @@ interface Props {
 function CashflowChart({
   invoices,
   expenses,
+  bills,
+  donations,
 }: {
   invoices: Invoice[];
   expenses: Expense[];
+  bills: Bill[];
+  donations: Donation[];
 }) {
   const t = useStrings();
   const lang = useLang();
+  const { isNonprofit, accountingMethod } = useBiz();
+  const isAccrual = accountingMethod === "accrual";
 
   const months = useMemo(() => {
     const out: { key: string; label: string; in: number; out: number }[] = [];
@@ -36,16 +42,29 @@ function CashflowChart({
       out.push({ key, label, in: 0, out: 0 });
     }
     for (const inv of invoices) {
-      if (inv.status !== "paid") continue;
+      if (!isAccrual && inv.status !== "paid") continue;
       const m = out.find((x) => inv.due_date.startsWith(x.key));
       if (m) m.in += invoiceTotal(inv);
+    }
+    if (isNonprofit) {
+      for (const d of donations) {
+        const m = out.find((x) => d.date.startsWith(x.key));
+        if (m) m.in += d.amount;
+      }
     }
     for (const e of expenses) {
       const m = out.find((x) => e.date.startsWith(x.key));
       if (m) m.out += e.amount;
     }
+    if (isAccrual) {
+      for (const b of bills) {
+        if (b.status !== "unpaid") continue;
+        const m = out.find((x) => b.due_date.startsWith(x.key));
+        if (m) m.out += b.amount;
+      }
+    }
     return out;
-  }, [invoices, expenses, lang]);
+  }, [invoices, expenses, bills, donations, lang, isAccrual, isNonprofit]);
 
   const W = 640;
   const H = 280;
@@ -430,9 +449,21 @@ function yoyDir(
 }
 
 /** Year-over-year: this year to date vs the same stretch last year. */
-function YoYCard({ invoices, expenses }: { invoices: Invoice[]; expenses: Expense[] }) {
+function YoYCard({
+  invoices,
+  expenses,
+  bills,
+  donations,
+}: {
+  invoices: Invoice[];
+  expenses: Expense[];
+  bills: Bill[];
+  donations: Donation[];
+}) {
   const t = useStrings();
   const lang = useLang();
+  const { isNonprofit, accountingMethod } = useBiz();
+  const isAccrual = accountingMethod === "accrual";
   const today = todayISO();
   const y = today.slice(0, 4);
   const lastY = String(Number(y) - 1);
@@ -444,17 +475,33 @@ function YoYCard({ invoices, expenses }: { invoices: Invoice[]; expenses: Expens
     invoices
       .filter(
         (i) =>
-          i.status === "paid" &&
+          (isAccrual || i.status === "paid") &&
           inRange(i.due_date, `${last ? lastY : y}-01-01`, last ? lastEnd : today)
       )
-      .reduce((s, i) => s + invoiceTotal(i), 0);
+      .reduce((s, i) => s + invoiceTotal(i), 0) +
+    (isNonprofit
+      ? donations
+          .filter((d) =>
+            inRange(d.date, `${last ? lastY : y}-01-01`, last ? lastEnd : today)
+          )
+          .reduce((s, d) => s + d.amount, 0)
+      : 0);
 
   const ytdOut = (last: boolean) =>
     expenses
       .filter((e) =>
         inRange(e.date, `${last ? lastY : y}-01-01`, last ? lastEnd : today)
       )
-      .reduce((s, e) => s + e.amount, 0);
+      .reduce((s, e) => s + e.amount, 0) +
+    (isAccrual
+      ? bills
+          .filter(
+            (b) =>
+              b.status === "unpaid" &&
+              inRange(b.due_date, `${last ? lastY : y}-01-01`, last ? lastEnd : today)
+          )
+          .reduce((s, b) => s + b.amount, 0)
+      : 0);
 
   const lastIncome = ytdIncome(true);
   const lastOut = ytdOut(true);
@@ -570,16 +617,26 @@ function NfpDeadlineCard() {
 export default function Home({ invoices, expenses, bills, donations, go }: Props) {
   const t = useStrings();
   const lang = useLang();
-  const { isNonprofit } = useBiz();
+  const { isNonprofit, accountingMethod } = useBiz();
   const today = todayISO();
+  const isAccrual = accountingMethod === "accrual";
 
+  // Cash: income counts when the customer pays. Accrual: income counts when
+  // the invoice is sent (paid or waiting). Donations always count — a gift
+  // received is money in, period.
   const moneyIn =
     invoices
-      .filter((i) => i.status === "paid")
+      .filter((i) => isAccrual || i.status === "paid")
       .reduce((s, i) => s + invoiceTotal(i), 0) +
-    // Nonprofits receive money as donations, not just paid invoices.
     (isNonprofit ? donations.reduce((s, d) => s + d.amount, 0) : 0);
-  const moneyOut = expenses.reduce((s, e) => s + e.amount, 0);
+  // Cash: expenses count when recorded. Accrual: unpaid bills count too —
+  // the money is owed once the bill exists. (Paying a bill creates the
+  // matching expense, so each bill is only ever counted once.)
+  const moneyOut =
+    expenses.reduce((s, e) => s + e.amount, 0) +
+    (isAccrual
+      ? bills.filter((b) => b.status === "unpaid").reduce((s, b) => s + b.amount, 0)
+      : 0);
   const left = moneyIn - moneyOut;
 
   const unpaid = invoices
@@ -626,7 +683,7 @@ export default function Home({ invoices, expenses, bills, donations, go }: Props
 
       {isNonprofit && <DonationsMonthCard donations={donations} go={go} />}
 
-      <YoYCard invoices={invoices} expenses={expenses} />
+      <YoYCard invoices={invoices} expenses={expenses} bills={bills} donations={donations} />
 
       {isNonprofit ? (
         <NfpDeadlineCard />
@@ -646,7 +703,7 @@ export default function Home({ invoices, expenses, bills, donations, go }: Props
 
       <div className="panel">
         <h2 style={{ marginTop: 0 }}>📈 {t.home.cashflowTitle}</h2>
-        <CashflowChart invoices={invoices} expenses={expenses} />
+        <CashflowChart invoices={invoices} expenses={expenses} bills={bills} donations={donations} />
       </div>
 
       <div className="two-col">

@@ -8,13 +8,14 @@ import { US_STATES } from "../data/us-states";
 import { tripDeduction } from "../data/mileage-rates";
 import { fmtDate, fmtMoney, todayISO, useLang, useStrings } from "../i18n";
 import { nfpDeadlineDate } from "./Home";
-import type { Contractor, ContractorPayment, Donation, Expense, Invoice, Trip } from "../types";
+import type { Bill, Contractor, ContractorPayment, Donation, Expense, Invoice, Trip } from "../types";
 
 type ReportId = "summary" | "income" | "expenses" | "owes" | "tax" | "monthly" | "taxguide";
 
 interface Props {
   invoices: Invoice[];
   expenses: Expense[];
+  bills: Bill[];
   contractors: Contractor[];
   contractorPayments: ContractorPayment[];
   trips: Trip[];
@@ -348,10 +349,11 @@ function NfpAnnualReport({
   );
 }
 
-export default function Reports({ invoices, expenses, contractors, contractorPayments, trips, donations }: Props) {
+export default function Reports({ invoices, expenses, bills, contractors, contractorPayments, trips, donations }: Props) {
   const t = useStrings();
   const lang = useLang();
-  const { pack, active, bizName, isNonprofit } = useBiz();
+  const { pack, active, bizName, isNonprofit, accountingMethod } = useBiz();
+  const isAccrual = accountingMethod === "accrual";
   const [report, setReport] = useState<ReportId>("summary");
   const [from, setFrom] = useState(firstOfMonth());
   const [to, setTo] = useState(todayISO());
@@ -366,15 +368,24 @@ export default function Reports({ invoices, expenses, contractors, contractorPay
 
   const inRange = (d: string) => d >= from && d <= to;
 
-  const paidInRange = useMemo(
-    () => invoices.filter((i) => i.status === "paid" && inRange(i.due_date)),
+  // Cash: income counts when the customer pays. Accrual: income counts when
+  // the invoice is sent (paid or waiting).
+  const incomeInRange = useMemo(
+    () => invoices.filter((i) => (isAccrual || i.status === "paid") && inRange(i.due_date)),
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [invoices, from, to]
+    [invoices, from, to, isAccrual]
   );
   const expInRange = useMemo(
     () => expenses.filter((e) => inRange(e.date)),
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [expenses, from, to]
+  );
+  // Accrual: an unpaid bill counts as an expense once the bill exists.
+  // (Paying a bill creates the matching expense, so each bill counts once.)
+  const unpaidBillsInRange = useMemo(
+    () => bills.filter((b) => b.status === "unpaid" && inRange(b.due_date)),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [bills, from, to]
   );
   const waitingInRange = useMemo(
     () =>
@@ -390,10 +401,21 @@ export default function Reports({ invoices, expenses, contractors, contractorPay
     return c ? (lang === "es" ? c.es : c.en) : t.expenses.other;
   };
 
-  const moneyIn = paidInRange.reduce((s, i) => s + invoiceTotal(i), 0);
-  const moneyOut = expInRange.reduce((s, e) => s + e.amount, 0);
-  const taxCollected = paidInRange.reduce((s, i) => s + i.tax_amount, 0);
-  const incomeByCat = useMemo(() => groupByCategory(paidInRange), [paidInRange]);
+  // Donations are money received — they count as money-in for nonprofits
+  // under both accounting methods.
+  const donationsInRange = useMemo(
+    () => (isNonprofit ? donations.filter((d) => inRange(d.date)) : []),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [donations, from, to, isNonprofit]
+  );
+  const donationInTotal = donationsInRange.reduce((s, d) => s + d.amount, 0);
+
+  const moneyIn = incomeInRange.reduce((s, i) => s + invoiceTotal(i), 0) + donationInTotal;
+  const moneyOut =
+    expInRange.reduce((s, e) => s + e.amount, 0) +
+    (isAccrual ? unpaidBillsInRange.reduce((s, b) => s + b.amount, 0) : 0);
+  const taxCollected = incomeInRange.reduce((s, i) => s + i.tax_amount, 0);
+  const incomeByCat = useMemo(() => groupByCategory(incomeInRange), [incomeInRange]);
   const expensesByCat = useMemo(() => groupByCategory(expInRange), [expInRange]);
 
   const payMethodLabel = (m: string | null): string => {
@@ -417,9 +439,9 @@ export default function Reports({ invoices, expenses, contractors, contractorPay
   };
 
   const inByMethod = useMemo(
-    () => byPayMethod(paidInRange.map((i) => ({ pay_method: i.pay_method, amount: invoiceTotal(i) }))),
+    () => byPayMethod(incomeInRange.map((i) => ({ pay_method: i.pay_method, amount: invoiceTotal(i) }))),
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [paidInRange, t]
+    [incomeInRange, t]
   );
   const outByMethod = useMemo(
     () => byPayMethod(expInRange.map((e) => ({ pay_method: e.pay_method, amount: e.amount }))),
@@ -441,14 +463,26 @@ export default function Reports({ invoices, expenses, contractors, contractorPay
         month: "long",
         year: "numeric",
       }).format(new Date(y, m - 1, 1));
-      const inAmt = invoices
-        .filter(
-          (i) => i.status === "paid" && i.due_date.startsWith(key) && inRange(i.due_date)
-        )
-        .reduce((s, i) => s + invoiceTotal(i), 0);
-      const outAmt = expenses
-        .filter((e) => e.date.startsWith(key) && inRange(e.date))
-        .reduce((s, e) => s + e.amount, 0);
+      const inAmt =
+        invoices
+          .filter(
+            (i) => (isAccrual || i.status === "paid") && i.due_date.startsWith(key) && inRange(i.due_date)
+          )
+          .reduce((s, i) => s + invoiceTotal(i), 0) +
+        (isNonprofit
+          ? donations
+              .filter((d) => d.date.startsWith(key) && inRange(d.date))
+              .reduce((s, d) => s + d.amount, 0)
+          : 0);
+      const outAmt =
+        expenses
+          .filter((e) => e.date.startsWith(key) && inRange(e.date))
+          .reduce((s, e) => s + e.amount, 0) +
+        (isAccrual
+          ? bills
+              .filter((b) => b.status === "unpaid" && b.due_date.startsWith(key) && inRange(b.due_date))
+              .reduce((s, b) => s + b.amount, 0)
+          : 0);
       out.push({ key, label, in: inAmt, out: outAmt });
       m++;
       if (m > 12) {
@@ -458,7 +492,7 @@ export default function Reports({ invoices, expenses, contractors, contractorPay
     }
     return out;
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [from, to, invoices, expenses, lang]);
+  }, [from, to, invoices, expenses, bills, donations, lang, isAccrual, isNonprofit]);
 
   // Nonprofits get the 990 helper instead of the for-profit tax reports.
   const reportTypes: { id: ReportId; label: string }[] = isNonprofit
@@ -576,24 +610,38 @@ export default function Reports({ invoices, expenses, contractors, contractorPay
     L.push(`${tp.business}: ${bizName || "CuentaLibre"}`);
     if (typeLabel) L.push(`${tp.typeL}: ${typeLabel}`);
     if (stateName) L.push(`${tp.stateL}: ${stateName}`);
+    L.push(`${tp.methodL}: ${isAccrual ? tp.methodAccrual : tp.methodCash}`);
     L.push("");
 
-    const paidInYear = invoices.filter((i) => i.status === "paid" && i.due_date.startsWith(y));
+    // Cash: income counts when the customer pays. Accrual: when billed.
+    // Accrual expenses include unpaid bills (each bill counts once — paying
+    // it creates the matching expense instead).
+    const incomeInYear = invoices.filter(
+      (i) => (isAccrual || i.status === "paid") && i.due_date.startsWith(y)
+    );
     const expInYear = expenses.filter((e) => e.date.startsWith(y));
-    const income = paidInYear.reduce((s, i) => s + invoiceTotal(i), 0);
-    const out = expInYear.reduce((s, e) => s + e.amount, 0);
-    const taxCollected = paidInYear.reduce((s, i) => s + i.tax_amount, 0);
+    const unpaidBillsInYear = isAccrual
+      ? bills.filter((b) => b.status === "unpaid" && b.due_date.startsWith(y))
+      : [];
+    const income = incomeInYear.reduce((s, i) => s + invoiceTotal(i), 0);
+    const out =
+      expInYear.reduce((s, e) => s + e.amount, 0) +
+      unpaidBillsInYear.reduce((s, b) => s + b.amount, 0);
+    const taxCollected = incomeInYear.reduce((s, i) => s + i.tax_amount, 0);
 
     L.push(`## ${tp.profitSummary}`);
     L.push("");
-    L.push(`- ${tp.income}: ${fmtMoney(income, lang)}`);
+    L.push(`- ${isAccrual ? tp.incomeAccrual : tp.income}: ${fmtMoney(income, lang)}`);
     L.push(`- ${tp.expensesW}: ${fmtMoney(out, lang)}`);
     L.push(`- ${tp.net}: ${fmtMoney(income - out, lang)}`);
     L.push("");
 
     L.push(`## ${tp.expensesByCat}`);
     L.push("");
-    const expByCat = groupByCategory(expInYear);
+    const expByCat = groupByCategory([
+      ...expInYear,
+      ...unpaidBillsInYear.map((b) => ({ category: b.category, amount: b.amount })),
+    ]);
     for (const [c, a] of expByCat) {
       L.push(`- ${catLabel(c)}: ${fmtMoney(a, lang)}`);
     }
@@ -643,7 +691,7 @@ export default function Reports({ invoices, expenses, contractors, contractorPay
 
     L.push(`## ${tp.unpaidTitle.replace("{year}", y)}`);
     L.push("");
-    L.push(tp.unpaidNote);
+    L.push(isAccrual ? tp.unpaidNoteAccrual : tp.unpaidNote);
     L.push("");
     const unpaidEnd = invoices
       .filter((i) => i.status === "waiting" && i.due_date <= `${y}-12-31`)
@@ -684,7 +732,7 @@ export default function Reports({ invoices, expenses, contractors, contractorPay
 
   const hasData =
     report === "summary"
-      ? paidInRange.length > 0 || expInRange.length > 0
+      ? incomeInRange.length > 0 || expInRange.length > 0 || donationInTotal > 0
       : report === "income"
         ? incomeByCat.length > 0
         : report === "expenses"
@@ -692,9 +740,9 @@ export default function Reports({ invoices, expenses, contractors, contractorPay
           : report === "owes"
             ? waitingInRange.length > 0
             : report === "tax"
-              ? paidInRange.length > 0 || expInRange.length > 0
+              ? incomeInRange.length > 0 || expInRange.length > 0
               : report === "taxguide"
-                ? paidInRange.length > 0 || expInRange.length > 0
+                ? incomeInRange.length > 0 || expInRange.length > 0
                 : months.some((m) => m.in > 0 || m.out > 0);
 
   return (
