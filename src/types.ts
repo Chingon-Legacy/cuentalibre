@@ -6,6 +6,9 @@ export type Screen =
   | "quotes"
   | "bills"
   | "expenses"
+  | "services"
+  | "time"
+  | "mileage"
   | "reports"
   | "settings"
   | "customers"
@@ -14,6 +17,9 @@ export type Screen =
 export type InvoiceStatus = "waiting" | "paid";
 
 export type Recurrence = "none" | "weekly" | "monthly";
+
+/** How money moved: cash, card, bank transfer, or paper check. */
+export type PayMethod = "cash" | "card" | "transfer" | "check";
 
 export interface Business {
   id: number;
@@ -36,6 +42,7 @@ export interface Invoice {
   status: InvoiceStatus;
   recurrence: Recurrence;
   recurring_from: number | null; // id of the template invoice this was generated from
+  pay_method: PayMethod | null;
   created_at: string;
 }
 
@@ -47,6 +54,9 @@ export interface Expense {
   category: string;
   date: string; // YYYY-MM-DD
   photo: string | null; // stored filename under app-data receipts/ or a data: URL (browser fallback)
+  recurrence: Recurrence;
+  recurring_from: number | null; // id of the template expense this was generated from
+  pay_method: PayMethod | null;
   created_at: string;
 }
 
@@ -60,6 +70,7 @@ export interface Bill {
   category: string;
   due_date: string; // YYYY-MM-DD
   status: BillStatus;
+  pay_method: PayMethod | null;
   created_at: string;
 }
 
@@ -95,6 +106,37 @@ export interface ContractorPayment {
   created_at: string;
 }
 
+/** A named service with a fixed price — tap to fill an invoice or quote. */
+export interface Service {
+  id: number;
+  business_id: number;
+  name: string;
+  price: number;
+  created_at: string;
+}
+
+/** Hours worked, convertible into an invoice. */
+export interface TimeEntry {
+  id: number;
+  business_id: number;
+  customer: string;
+  description: string;
+  hours: number;
+  date: string; // YYYY-MM-DD
+  invoiced: number; // 0 = not yet invoiced, 1 = invoiced
+  created_at: string;
+}
+
+/** A business drive, for the IRS mileage deduction. */
+export interface Trip {
+  id: number;
+  business_id: number;
+  date: string; // YYYY-MM-DD
+  miles: number;
+  purpose: string;
+  created_at: string;
+}
+
 export interface BackupData {
   app: "cuentalibre";
   version: 2;
@@ -110,4 +152,7 @@ export interface BackupData {
   quotes?: Quote[];
   contractors?: Contractor[];
   contractorPayments?: ContractorPayment[];
+  services?: Service[];
+  timeEntries?: TimeEntry[];
+  trips?: Trip[];
 }

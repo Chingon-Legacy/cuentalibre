@@ -4,8 +4,9 @@ import { downloadCsv, downloadText, toCsv } from "../backup";
 import { invoiceTotal } from "../db";
 import { businessTypes } from "../data/categories";
 import { US_STATES } from "../data/us-states";
+import { tripDeduction } from "../data/mileage-rates";
 import { fmtDate, fmtMoney, todayISO, useLang, useStrings } from "../i18n";
-import type { Contractor, ContractorPayment, Expense, Invoice } from "../types";
+import type { Contractor, ContractorPayment, Expense, Invoice, Trip } from "../types";
 
 type ReportId = "summary" | "income" | "expenses" | "owes" | "tax" | "monthly" | "taxguide";
 
@@ -14,6 +15,7 @@ interface Props {
   expenses: Expense[];
   contractors: Contractor[];
   contractorPayments: ContractorPayment[];
+  trips: Trip[];
 }
 
 function firstOfMonth(): string {
@@ -29,7 +31,7 @@ function groupByCategory(items: { category: string; amount: number }[]): [string
 
 const money = (n: number) => (Math.round(n * 100) / 100).toFixed(2);
 
-export default function Reports({ invoices, expenses, contractors, contractorPayments }: Props) {
+export default function Reports({ invoices, expenses, contractors, contractorPayments, trips }: Props) {
   const t = useStrings();
   const lang = useLang();
   const { pack, active, bizName } = useBiz();
@@ -68,6 +70,37 @@ export default function Reports({ invoices, expenses, contractors, contractorPay
   const taxCollected = paidInRange.reduce((s, i) => s + i.tax_amount, 0);
   const incomeByCat = useMemo(() => groupByCategory(paidInRange), [paidInRange]);
   const expensesByCat = useMemo(() => groupByCategory(expInRange), [expInRange]);
+
+  const payMethodLabel = (m: string | null): string => {
+    if (m === "cash") return t.paymethod.cash;
+    if (m === "card") return t.paymethod.card;
+    if (m === "transfer") return t.paymethod.transfer;
+    if (m === "check") return t.paymethod.check;
+    return t.paymethod.notSet;
+  };
+
+  /** [method, total] pairs sorted by total, for paid invoices or expenses in range. */
+  const byPayMethod = (
+    items: { pay_method: string | null; amount: number }[]
+  ): [string, number][] => {
+    const m = new Map<string, number>();
+    for (const it of items) {
+      const k = it.pay_method ?? "";
+      m.set(k, (m.get(k) ?? 0) + it.amount);
+    }
+    return [...m.entries()].sort((a, b) => b[1] - a[1]);
+  };
+
+  const inByMethod = useMemo(
+    () => byPayMethod(paidInRange.map((i) => ({ pay_method: i.pay_method, amount: invoiceTotal(i) }))),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [paidInRange, t]
+  );
+  const outByMethod = useMemo(
+    () => byPayMethod(expInRange.map((e) => ({ pay_method: e.pay_method, amount: e.amount }))),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [expInRange, t]
+  );
 
   const months = useMemo(() => {
     const out: { key: string; label: string; in: number; out: number }[] = [];
@@ -129,6 +162,15 @@ export default function Reports({ invoices, expenses, contractors, contractorPay
         [t.reports.moneyOut, money(moneyOut)],
         [t.reports.left, money(moneyIn - moneyOut)],
       ];
+      if (inByMethod.length > 1 || outByMethod.length > 1) {
+        rows.push([t.paymethod.breakdown, ""]);
+        for (const [m, a] of inByMethod) {
+          rows.push([`${t.reports.moneyIn} · ${payMethodLabel(m || null)}`, money(a)]);
+        }
+        for (const [m, a] of outByMethod) {
+          rows.push([`${t.reports.moneyOut} · ${payMethodLabel(m || null)}`, money(a)]);
+        }
+      }
     } else if (report === "income") {
       headers = [t.reports.category, t.reports.amount];
       rows = incomeByCat.map(([c, a]) => [catLabel(c), money(a)]);
@@ -250,6 +292,21 @@ export default function Reports({ invoices, expenses, contractors, contractorPay
     }
     L.push("");
 
+    L.push(`## ${tp.mileageTitle.replace("{year}", y)}`);
+    L.push("");
+    L.push(tp.mileageSub);
+    L.push("");
+    const tripsInYear = trips.filter((tr) => tr.date.startsWith(y));
+    if (tripsInYear.length === 0) {
+      L.push(tp.noTrips);
+    } else {
+      const totalMiles = tripsInYear.reduce((s, tr) => s + tr.miles, 0);
+      const totalDed = tripsInYear.reduce((s, tr) => s + tripDeduction(tr.date, tr.miles), 0);
+      const roundedMiles = Math.round(totalMiles * 10) / 10;
+      L.push(`- ${roundedMiles} ${tp.milesLabel}: ${fmtMoney(totalDed, lang)}`);
+    }
+    L.push("");
+
     L.push(`## ${tp.unpaidTitle.replace("{year}", y)}`);
     L.push("");
     L.push(tp.unpaidNote);
@@ -341,28 +398,55 @@ export default function Reports({ invoices, expenses, contractors, contractorPay
         {!hasData ? (
           <p className="empty-note">{t.reports.noData}</p>
         ) : report === "summary" ? (
-          <table className="report">
-            <thead>
-              <tr>
-                <th>{t.reports.category}</th>
-                <th className="num">{t.reports.amount}</th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr>
-                <td>{t.reports.moneyIn}</td>
-                <td className="num">{fmtMoney(moneyIn, lang)}</td>
-              </tr>
-              <tr>
-                <td>{t.reports.moneyOut}</td>
-                <td className="num">{fmtMoney(moneyOut, lang)}</td>
-              </tr>
-              <tr className="total">
-                <td>{t.reports.left}</td>
-                <td className="num">{fmtMoney(moneyIn - moneyOut, lang)}</td>
-              </tr>
-            </tbody>
-          </table>
+          <>
+            <table className="report">
+              <thead>
+                <tr>
+                  <th>{t.reports.category}</th>
+                  <th className="num">{t.reports.amount}</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td>{t.reports.moneyIn}</td>
+                  <td className="num">{fmtMoney(moneyIn, lang)}</td>
+                </tr>
+                <tr>
+                  <td>{t.reports.moneyOut}</td>
+                  <td className="num">{fmtMoney(moneyOut, lang)}</td>
+                </tr>
+                <tr className="total">
+                  <td>{t.reports.left}</td>
+                  <td className="num">{fmtMoney(moneyIn - moneyOut, lang)}</td>
+                </tr>
+              </tbody>
+            </table>
+            {(inByMethod.length > 1 || outByMethod.length > 1) && (
+              <>
+                <h3 style={{ marginTop: 24 }}>💳 {t.paymethod.breakdown}</h3>
+                <table className="report">
+                  <tbody>
+                    {inByMethod.map(([m, a]) => (
+                      <tr key={`in-${m}`}>
+                        <td style={{ paddingLeft: 24 }}>
+                          {t.reports.moneyIn} · {payMethodLabel(m || null)}
+                        </td>
+                        <td className="num">{fmtMoney(a, lang)}</td>
+                      </tr>
+                    ))}
+                    {outByMethod.map(([m, a]) => (
+                      <tr key={`out-${m}`}>
+                        <td style={{ paddingLeft: 24 }}>
+                          {t.reports.moneyOut} · {payMethodLabel(m || null)}
+                        </td>
+                        <td className="num">{fmtMoney(a, lang)}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </>
+            )}
+          </>
         ) : report === "income" || report === "expenses" ? (
           <table className="report">
             <thead>

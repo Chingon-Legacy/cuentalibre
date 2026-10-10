@@ -12,7 +12,8 @@ import {
 } from "../photos";
 import { fmtDate, fmtMoney, todayISO, useLang, useStrings } from "../i18n";
 import EmptyState from "../components/EmptyState";
-import type { Expense } from "../types";
+import PayMethodSelect from "../components/PayMethodSelect";
+import type { Expense, PayMethod, Recurrence } from "../types";
 import CsvImport from "./CsvImport";
 
 interface Props {
@@ -63,6 +64,8 @@ export default function Expenses({ expenses, refresh }: Props) {
   const [amount, setAmount] = useState("");
   const [category, setCategory] = useState(pack.expense[0]?.id ?? "other");
   const [date, setDate] = useState(todayISO());
+  const [recurrence, setRecurrence] = useState<Recurrence>("none");
+  const [payMethod, setPayMethod] = useState<PayMethod | null>(null);
   const [search, setSearch] = useState("");
   const [catFilter, setCatFilter] = useState("all");
   // Receipt photo state.
@@ -92,6 +95,8 @@ export default function Expenses({ expenses, refresh }: Props) {
     setAmount("");
     setCategory(pack.expense[0]?.id ?? "other");
     setDate(todayISO());
+    setRecurrence("none");
+    setPayMethod(null);
     setEditing(null);
     setShowForm(false);
     resetPhoto();
@@ -102,6 +107,8 @@ export default function Expenses({ expenses, refresh }: Props) {
     setAmount("");
     setCategory(pack.expense[0]?.id ?? "other");
     setDate(todayISO());
+    setRecurrence("none");
+    setPayMethod(null);
     setEditing(null);
     resetPhoto();
     setShowForm(true);
@@ -112,6 +119,8 @@ export default function Expenses({ expenses, refresh }: Props) {
     setAmount(String(e.amount));
     setCategory(e.category);
     setDate(e.date);
+    setRecurrence("none");
+    setPayMethod(e.pay_method ?? null);
     setEditing(e);
     setPhotoCurrent(e.photo);
     setPhotoNew(null);
@@ -178,6 +187,7 @@ export default function Expenses({ expenses, refresh }: Props) {
         category,
         date,
         photo: finalPhoto,
+        pay_method: payMethod,
       });
     } else {
       const id = await addExpense({
@@ -185,6 +195,8 @@ export default function Expenses({ expenses, refresh }: Props) {
         amount: rounded,
         category,
         date,
+        recurrence,
+        pay_method: payMethod,
       });
       if (isTauri() && photoNew) {
         await setExpensePhoto(id, await saveReceiptPhoto(id, photoNew));
@@ -286,6 +298,20 @@ export default function Expenses({ expenses, refresh }: Props) {
                 ))}
               </select>
             </div>
+            {!editing && (
+              <div className="field">
+                <label>{t.invoices.repeat}</label>
+                <select
+                  value={recurrence}
+                  onChange={(e) => setRecurrence(e.target.value as Recurrence)}
+                >
+                  <option value="none">{t.invoices.repeatNone}</option>
+                  <option value="weekly">{t.invoices.repeatWeekly}</option>
+                  <option value="monthly">{t.invoices.repeatMonthly}</option>
+                </select>
+              </div>
+            )}
+            <PayMethodSelect value={payMethod} onChange={setPayMethod} />
             <div className="field full">
               <label>{t.expenses.receiptPhoto}</label>
               {photoPreview ? (
@@ -377,7 +403,14 @@ export default function Expenses({ expenses, refresh }: Props) {
               <li key={e.id}>
                 {e.photo && <PhotoThumb stored={e.photo} onOpen={setViewingPhoto} />}
                 <div className="row-main">
-                  <div className="row-title">{e.description}</div>
+                  <div className="row-title">
+                    {e.description}
+                    {e.recurrence !== "none" && (
+                      <span className="badge waiting" style={{ marginLeft: 8 }}>
+                        🔁 {t.invoices.recurring}
+                      </span>
+                    )}
+                  </div>
                   <div className="row-sub">
                     {catLabel(e.category)} · {fmtDate(e.date, lang)}
                   </div>

@@ -1,7 +1,7 @@
-import { useMemo } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { fmtDate, fmtMoney, todayISO, useLang, useStrings } from "../i18n";
 import { useBiz } from "../App";
-import { invoiceTotal } from "../db";
+import { getSetting, invoiceTotal } from "../db";
 import type { Bill, Expense, Invoice, Screen } from "../types";
 
 interface Props {
@@ -264,6 +264,64 @@ function Insights({
   );
 }
 
+/** Friendly monthly income goal: progress bar fed by this month's paid invoices. */
+function GoalCard({ invoices }: { invoices: Invoice[] }) {
+  const t = useStrings();
+  const lang = useLang();
+  const { activeId } = useBiz();
+  const [goal, setGoal] = useState<number | null>(null);
+
+  useEffect(() => {
+    if (activeId == null) {
+      setGoal(null);
+      return;
+    }
+    getSetting(`incomeGoal:${activeId}`)
+      .then((v) => {
+        const n = v ? parseFloat(v) : NaN;
+        setGoal(v && !Number.isNaN(n) && n > 0 ? Math.round(n * 100) / 100 : null);
+      })
+      .catch(() => setGoal(null));
+  }, [activeId]);
+
+  if (goal == null) return null;
+
+  const mk = monthKey(0);
+  const done = invoices
+    .filter((i) => i.status === "paid" && i.due_date.startsWith(mk))
+    .reduce((s, i) => s + invoiceTotal(i), 0);
+  const pct = Math.min(100, Math.round((done / goal) * 100));
+  const monthName = new Intl.DateTimeFormat(lang === "es" ? "es-US" : "en-US", {
+    month: "long",
+  }).format(new Date());
+  const reached = done >= goal;
+
+  return (
+    <div className="panel">
+      <h2 style={{ marginTop: 0 }}>
+        🎯 {t.goal.cardTitle.replace("{month}", monthName)}
+      </h2>
+      <p style={{ margin: "4px 0 8px" }}>
+        {t.goal.of
+          .replace("{done}", fmtMoney(done, lang))
+          .replace("{goal}", fmtMoney(goal, lang))}
+      </p>
+      <div className="goal-bar" role="progressbar" aria-valuenow={pct} aria-valuemin={0} aria-valuemax={100}>
+        <div className="goal-fill" style={{ width: `${pct}%` }} />
+      </div>
+      {reached ? (
+        <p style={{ margin: "8px 0 0" }}>
+          <strong>{t.goal.reached}</strong>
+        </p>
+      ) : (
+        <p className="row-sub" style={{ margin: "8px 0 0" }}>
+          {t.goal.remaining.replace("{money}", fmtMoney(goal - done, lang))}
+        </p>
+      )}
+    </div>
+  );
+}
+
 export default function Home({ invoices, expenses, bills, go }: Props) {
   const t = useStrings();
   const lang = useLang();
@@ -310,6 +368,8 @@ export default function Home({ invoices, expenses, bills, go }: Props) {
       </div>
 
       <Insights invoices={invoices} expenses={expenses} bills={bills} />
+
+      <GoalCard invoices={invoices} />
 
       <div className="panel tax-reminder">
         <h2 style={{ marginTop: 0 }}>🧾 {t.home.taxTitle}</h2>

@@ -3,7 +3,8 @@ import { useBiz } from "../App";
 import { addBill, deleteBill, payBill, updateBill } from "../db";
 import { fmtDate, fmtMoney, todayISO, useLang, useStrings } from "../i18n";
 import EmptyState from "../components/EmptyState";
-import type { Bill } from "../types";
+import PayMethodSelect from "../components/PayMethodSelect";
+import type { Bill, PayMethod } from "../types";
 
 interface Props {
   bills: Bill[];
@@ -20,6 +21,7 @@ export default function Bills({ bills, refresh }: Props) {
   const [amount, setAmount] = useState("");
   const [category, setCategory] = useState(pack.expense[0]?.id ?? "other");
   const [dueDate, setDueDate] = useState(todayISO());
+  const [payMethod, setPayMethod] = useState<PayMethod | null>(null);
   const today = todayISO();
 
   const reset = () => {
@@ -27,6 +29,7 @@ export default function Bills({ bills, refresh }: Props) {
     setAmount("");
     setCategory(pack.expense[0]?.id ?? "other");
     setDueDate(todayISO());
+    setPayMethod(null);
     setEditing(null);
     setShowForm(false);
   };
@@ -41,6 +44,7 @@ export default function Bills({ bills, refresh }: Props) {
     setAmount(String(b.amount));
     setCategory(b.category);
     setDueDate(b.due_date);
+    setPayMethod(b.pay_method ?? null);
     setEditing(b);
     setShowForm(true);
   };
@@ -55,9 +59,10 @@ export default function Bills({ bills, refresh }: Props) {
         amount: rounded,
         category,
         due_date: dueDate,
+        pay_method: payMethod,
       });
     } else {
-      await addBill({ payee: payee.trim(), amount: rounded, category, due_date: dueDate });
+      await addBill({ payee: payee.trim(), amount: rounded, category, due_date: dueDate, pay_method: payMethod });
     }
     reset();
     await refresh();
@@ -150,6 +155,7 @@ export default function Bills({ bills, refresh }: Props) {
                 onChange={(e) => setDueDate(e.target.value)}
               />
             </div>
+            <PayMethodSelect value={payMethod} onChange={setPayMethod} />
           </div>
           <p className="tax-note">{t.bills.paidNote}</p>
           <div className="form-actions">

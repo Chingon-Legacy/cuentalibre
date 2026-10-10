@@ -8,9 +8,13 @@ import type {
   Expense,
   Invoice,
   InvoiceStatus,
+  PayMethod,
   Quote,
   QuoteStatus,
   Recurrence,
+  Service,
+  TimeEntry,
+  Trip,
 } from "./types";
 
 let dbPromise: Promise<Database> | null = null;
@@ -115,6 +119,9 @@ const MONEY_TABLES = [
   "quotes",
   "contractors",
   "contractor_payments",
+  "services",
+  "time_entries",
+  "trips",
 ] as const;
 
 export async function initDb(): Promise<void> {
@@ -208,6 +215,37 @@ export async function initDb(): Promise<void> {
       created_at TEXT NOT NULL
     )
   `);
+  await db.execute(`
+    CREATE TABLE IF NOT EXISTS services (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      business_id INTEGER NOT NULL DEFAULT 1,
+      name TEXT NOT NULL,
+      price REAL NOT NULL,
+      created_at TEXT NOT NULL
+    )
+  `);
+  await db.execute(`
+    CREATE TABLE IF NOT EXISTS time_entries (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      business_id INTEGER NOT NULL DEFAULT 1,
+      customer TEXT NOT NULL,
+      description TEXT NOT NULL DEFAULT '',
+      hours REAL NOT NULL,
+      date TEXT NOT NULL,
+      invoiced INTEGER NOT NULL DEFAULT 0,
+      created_at TEXT NOT NULL
+    )
+  `);
+  await db.execute(`
+    CREATE TABLE IF NOT EXISTS trips (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      business_id INTEGER NOT NULL DEFAULT 1,
+      date TEXT NOT NULL,
+      miles REAL NOT NULL,
+      purpose TEXT NOT NULL DEFAULT '',
+      created_at TEXT NOT NULL
+    )
+  `);
 
   // Migrations for databases created before these columns existed.
   if (!(await columnExists("invoices", "business_id"))) {
@@ -236,6 +274,19 @@ export async function initDb(): Promise<void> {
   // Receipt photos live in a new nullable column on expenses.
   if (!(await columnExists("expenses", "photo"))) {
     await db.execute("ALTER TABLE expenses ADD COLUMN photo TEXT");
+  }
+  // How money moved: cash, card, transfer, or check (nullable = not set).
+  for (const t of ["invoices", "expenses", "bills"] as const) {
+    if (!(await columnExists(t, "pay_method"))) {
+      await db.execute(`ALTER TABLE ${t} ADD COLUMN pay_method TEXT`);
+    }
+  }
+  // Recurring expenses mirror recurring invoices.
+  if (!(await columnExists("expenses", "recurrence"))) {
+    await db.execute("ALTER TABLE expenses ADD COLUMN recurrence TEXT NOT NULL DEFAULT 'none'");
+  }
+  if (!(await columnExists("expenses", "recurring_from"))) {
+    await db.execute("ALTER TABLE expenses ADD COLUMN recurring_from INTEGER");
   }
 
   // One-time migration: legacy single-business installs get their data
@@ -360,13 +411,14 @@ export async function addInvoice(input: {
   due_date: string;
   recurrence?: Recurrence;
   tax_rate?: number;
+  pay_method?: PayMethod | null;
 }): Promise<void> {
   const db = await getDb();
   const number = await nextInvoiceNumber();
   const rate = input.tax_rate ?? 0;
   const taxAmount = calcTaxAmount(input.amount, rate);
   await db.execute(
-    "INSERT INTO invoices (business_id, number, customer, amount, tax_rate, tax_amount, category, due_date, status, recurrence, recurring_from, created_at) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, 'waiting', $9, NULL, $10)",
+    "INSERT INTO invoices (business_id, number, customer, amount, tax_rate, tax_amount, category, due_date, status, recurrence, recurring_from, pay_method, created_at) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, 'waiting', $9, NULL, $10, $11)",
     [
       activeBusinessId,
       number,
@@ -377,6 +429,7 @@ export async function addInvoice(input: {
       input.category,
       input.due_date,
       input.recurrence ?? "none",
+      input.pay_method ?? null,
       new Date().toISOString(),
     ]
   );
@@ -384,13 +437,13 @@ export async function addInvoice(input: {
 
 export async function updateInvoice(
   id: number,
-  input: { customer: string; amount: number; category: string; due_date: string; tax_rate: number }
+  input: { customer: string; amount: number; category: string; due_date: string; tax_rate: number; pay_method?: PayMethod | null }
 ): Promise<void> {
   const db = await getDb();
   const taxAmount = calcTaxAmount(input.amount, input.tax_rate);
   await db.execute(
-    `UPDATE invoices SET customer = $1, amount = $2, tax_rate = $3, tax_amount = $4, category = $5, due_date = $6 WHERE id = $7 ${bizFilterAnd()}`,
-    [input.customer, input.amount, input.tax_rate, taxAmount, input.category, input.due_date, id]
+    `UPDATE invoices SET customer = $1, amount = $2, tax_rate = $3, tax_amount = $4, category = $5, due_date = $6, pay_method = $7 WHERE id = $8 ${bizFilterAnd()}`,
+    [input.customer, input.amount, input.tax_rate, taxAmount, input.category, input.due_date, input.pay_method ?? null, id]
   );
 }
 
@@ -436,6 +489,47 @@ export async function generateRecurringInvoices(): Promise<void> {
   }
 }
 
+/**
+ * Creates the next expense for every recurring template whose next
+ * period has arrived. Same model as recurring invoices: generated
+ * rows are linked to their template (recurring_from) and never
+ * duplicated within the same period.
+ */
+export async function generateRecurringExpenses(): Promise<void> {
+  const db = await getDb();
+  const templates = await db.select<Expense[]>(
+    `SELECT * FROM expenses WHERE recurrence IN ('weekly','monthly') ${bizFilterAnd()}`
+  );
+  const today = localToday();
+  for (const tpl of templates) {
+    let next = addPeriod(tpl.date, tpl.recurrence);
+    let guard = 0;
+    while (next <= today && guard < 60) {
+      guard++;
+      const existing = await db.select<{ id: number }[]>(
+        "SELECT id FROM expenses WHERE recurring_from = $1 AND date = $2",
+        [tpl.id, next]
+      );
+      if (existing.length === 0) {
+        await db.execute(
+          "INSERT INTO expenses (business_id, description, amount, category, date, photo, recurrence, recurring_from, pay_method, created_at) VALUES ($1,$2,$3,$4,$5,NULL,'none',$6,$7,$8)",
+          [
+            tpl.business_id,
+            tpl.description,
+            tpl.amount,
+            tpl.category,
+            next,
+            tpl.id,
+            tpl.pay_method ?? null,
+            new Date().toISOString(),
+          ]
+        );
+      }
+      next = addPeriod(next, tpl.recurrence);
+    }
+  }
+}
+
 export async function setInvoiceStatus(id: number, status: InvoiceStatus): Promise<void> {
   const db = await getDb();
   await db.execute(`UPDATE invoices SET status = $1 WHERE id = $2 ${bizFilterAnd()}`, [
@@ -465,10 +559,12 @@ export async function addExpense(input: {
   category: string;
   date: string;
   photo?: string | null;
+  recurrence?: Recurrence;
+  pay_method?: PayMethod | null;
 }): Promise<number> {
   const db = await getDb();
   const res = await db.execute(
-    "INSERT INTO expenses (business_id, description, amount, category, date, photo, created_at) VALUES ($1, $2, $3, $4, $5, $6, $7)",
+    "INSERT INTO expenses (business_id, description, amount, category, date, photo, recurrence, recurring_from, pay_method, created_at) VALUES ($1, $2, $3, $4, $5, $6, $7, NULL, $8, $9)",
     [
       activeBusinessId,
       input.description,
@@ -476,6 +572,8 @@ export async function addExpense(input: {
       input.category,
       input.date,
       input.photo ?? null,
+      input.recurrence ?? "none",
+      input.pay_method ?? null,
       new Date().toISOString(),
     ]
   );
@@ -484,18 +582,18 @@ export async function addExpense(input: {
 
 export async function updateExpense(
   id: number,
-  input: { description: string; amount: number; category: string; date: string; photo?: string | null }
+  input: { description: string; amount: number; category: string; date: string; photo?: string | null; pay_method?: PayMethod | null }
 ): Promise<void> {
   const db = await getDb();
   if (input.photo === undefined) {
     await db.execute(
-      `UPDATE expenses SET description = $1, amount = $2, category = $3, date = $4 WHERE id = $5 ${bizFilterAnd()}`,
-      [input.description, input.amount, input.category, input.date, id]
+      `UPDATE expenses SET description = $1, amount = $2, category = $3, date = $4, pay_method = $5 WHERE id = $6 ${bizFilterAnd()}`,
+      [input.description, input.amount, input.category, input.date, input.pay_method ?? null, id]
     );
   } else {
     await db.execute(
-      `UPDATE expenses SET description = $1, amount = $2, category = $3, date = $4, photo = $5 WHERE id = $6 ${bizFilterAnd()}`,
-      [input.description, input.amount, input.category, input.date, input.photo, id]
+      `UPDATE expenses SET description = $1, amount = $2, category = $3, date = $4, photo = $5, pay_method = $6 WHERE id = $7 ${bizFilterAnd()}`,
+      [input.description, input.amount, input.category, input.date, input.photo, input.pay_method ?? null, id]
     );
   }
 }
@@ -522,22 +620,23 @@ export async function addBill(input: {
   amount: number;
   category: string;
   due_date: string;
+  pay_method?: PayMethod | null;
 }): Promise<void> {
   const db = await getDb();
   await db.execute(
-    "INSERT INTO bills (business_id, payee, amount, category, due_date, status, created_at) VALUES ($1, $2, $3, $4, 'unpaid', $5)",
-    [activeBusinessId, input.payee, input.amount, input.category, input.due_date, new Date().toISOString()]
+    "INSERT INTO bills (business_id, payee, amount, category, due_date, status, pay_method, created_at) VALUES ($1, $2, $3, $4, 'unpaid', $5, $6)",
+    [activeBusinessId, input.payee, input.amount, input.category, input.due_date, input.pay_method ?? null, new Date().toISOString()]
   );
 }
 
 export async function updateBill(
   id: number,
-  input: { payee: string; amount: number; category: string; due_date: string }
+  input: { payee: string; amount: number; category: string; due_date: string; pay_method?: PayMethod | null }
 ): Promise<void> {
   const db = await getDb();
   await db.execute(
-    `UPDATE bills SET payee = $1, amount = $2, category = $3, due_date = $4 WHERE id = $5 ${bizFilterAnd()}`,
-    [input.payee, input.amount, input.category, input.due_date, id]
+    `UPDATE bills SET payee = $1, amount = $2, category = $3, due_date = $4, pay_method = $5 WHERE id = $6 ${bizFilterAnd()}`,
+    [input.payee, input.amount, input.category, input.due_date, input.pay_method ?? null, id]
   );
 }
 
@@ -667,6 +766,99 @@ export async function deleteContractorPayment(id: number): Promise<void> {
   await db.execute(`DELETE FROM contractor_payments WHERE id = $1 ${bizFilterAnd()}`, [id]);
 }
 
+// ---- services (price list) ----
+
+export async function getServices(): Promise<Service[]> {
+  const db = await getDb();
+  return db.select<Service[]>(`SELECT * FROM services ${bizFilter()} ORDER BY name ASC`);
+}
+
+export async function addService(input: { name: string; price: number }): Promise<void> {
+  const db = await getDb();
+  await db.execute(
+    "INSERT INTO services (business_id, name, price, created_at) VALUES ($1, $2, $3, $4)",
+    [activeBusinessId, input.name, input.price, new Date().toISOString()]
+  );
+}
+
+export async function updateService(
+  id: number,
+  input: { name: string; price: number }
+): Promise<void> {
+  const db = await getDb();
+  await db.execute(
+    `UPDATE services SET name = $1, price = $2 WHERE id = $3 ${bizFilterAnd()}`,
+    [input.name, input.price, id]
+  );
+}
+
+export async function deleteService(id: number): Promise<void> {
+  const db = await getDb();
+  await db.execute(`DELETE FROM services WHERE id = $1 ${bizFilterAnd()}`, [id]);
+}
+
+// ---- time entries ----
+
+export async function getTimeEntries(): Promise<TimeEntry[]> {
+  const db = await getDb();
+  return db.select<TimeEntry[]>(
+    `SELECT * FROM time_entries ${bizFilter()} ORDER BY date DESC, id DESC`
+  );
+}
+
+export async function addTimeEntry(input: {
+  customer: string;
+  description: string;
+  hours: number;
+  date: string;
+}): Promise<void> {
+  const db = await getDb();
+  await db.execute(
+    "INSERT INTO time_entries (business_id, customer, description, hours, date, invoiced, created_at) VALUES ($1, $2, $3, $4, $5, 0, $6)",
+    [activeBusinessId, input.customer, input.description, input.hours, input.date, new Date().toISOString()]
+  );
+}
+
+export async function deleteTimeEntry(id: number): Promise<void> {
+  const db = await getDb();
+  await db.execute(`DELETE FROM time_entries WHERE id = $1 ${bizFilterAnd()}`, [id]);
+}
+
+/** Marks time entries as invoiced after they are converted into an invoice. */
+export async function markTimeEntriesInvoiced(ids: number[]): Promise<void> {
+  if (ids.length === 0) return;
+  const db = await getDb();
+  const placeholders = ids.map((_, i) => `$${i + 1}`).join(",");
+  await db.execute(
+    `UPDATE time_entries SET invoiced = 1 WHERE id IN (${placeholders}) ${bizFilterAnd()}`,
+    ids
+  );
+}
+
+// ---- mileage trips ----
+
+export async function getTrips(): Promise<Trip[]> {
+  const db = await getDb();
+  return db.select<Trip[]>(`SELECT * FROM trips ${bizFilter()} ORDER BY date DESC, id DESC`);
+}
+
+export async function addTrip(input: {
+  date: string;
+  miles: number;
+  purpose: string;
+}): Promise<void> {
+  const db = await getDb();
+  await db.execute(
+    "INSERT INTO trips (business_id, date, miles, purpose, created_at) VALUES ($1, $2, $3, $4, $5)",
+    [activeBusinessId, input.date, input.miles, input.purpose, new Date().toISOString()]
+  );
+}
+
+export async function deleteTrip(id: number): Promise<void> {
+  const db = await getDb();
+  await db.execute(`DELETE FROM trips WHERE id = $1 ${bizFilterAnd()}`, [id]);
+}
+
 // ---- full export (unfiltered) for backups ----
 
 export interface AllData {
@@ -677,11 +869,14 @@ export interface AllData {
   quotes: Quote[];
   contractors: Contractor[];
   contractorPayments: ContractorPayment[];
+  services: Service[];
+  timeEntries: TimeEntry[];
+  trips: Trip[];
 }
 
 export async function exportAllData(): Promise<AllData> {
   const db = await getDb();
-  const [businesses, invoices, expenses, bills, quotes, contractors, contractorPayments] =
+  const [businesses, invoices, expenses, bills, quotes, contractors, contractorPayments, services, timeEntries, trips] =
     await Promise.all([
       db.select<Business[]>("SELECT * FROM businesses ORDER BY id ASC"),
       db.select<Invoice[]>("SELECT * FROM invoices ORDER BY id ASC"),
@@ -690,8 +885,11 @@ export async function exportAllData(): Promise<AllData> {
       db.select<Quote[]>("SELECT * FROM quotes ORDER BY id ASC"),
       db.select<Contractor[]>("SELECT * FROM contractors ORDER BY id ASC"),
       db.select<ContractorPayment[]>("SELECT * FROM contractor_payments ORDER BY id ASC"),
+      db.select<Service[]>("SELECT * FROM services ORDER BY id ASC"),
+      db.select<TimeEntry[]>("SELECT * FROM time_entries ORDER BY id ASC"),
+      db.select<Trip[]>("SELECT * FROM trips ORDER BY id ASC"),
     ]);
-  return { businesses, invoices, expenses, bills, quotes, contractors, contractorPayments };
+  return { businesses, invoices, expenses, bills, quotes, contractors, contractorPayments, services, timeEntries, trips };
 }
 
 // ---- backup / restore ----
@@ -747,7 +945,7 @@ export async function importBackup(data: BackupData): Promise<void> {
 
   for (const inv of data.invoices) {
     await db.execute(
-      "INSERT INTO invoices (id, business_id, number, customer, amount, tax_rate, tax_amount, category, due_date, status, recurrence, recurring_from, created_at) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)",
+      "INSERT INTO invoices (id, business_id, number, customer, amount, tax_rate, tax_amount, category, due_date, status, recurrence, recurring_from, pay_method, created_at) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)",
       [
         inv.id,
         mapBiz(inv.business_id),
@@ -761,13 +959,14 @@ export async function importBackup(data: BackupData): Promise<void> {
         inv.status,
         inv.recurrence ?? "none",
         inv.recurring_from ?? null,
+        inv.pay_method ?? null,
         inv.created_at,
       ]
     );
   }
   for (const exp of data.expenses) {
     await db.execute(
-      "INSERT INTO expenses (id, business_id, description, amount, category, date, photo, created_at) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)",
+      "INSERT INTO expenses (id, business_id, description, amount, category, date, photo, recurrence, recurring_from, pay_method, created_at) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)",
       [
         exp.id,
         mapBiz(exp.business_id),
@@ -776,6 +975,9 @@ export async function importBackup(data: BackupData): Promise<void> {
         exp.category,
         exp.date,
         exp.photo ?? null,
+        exp.recurrence ?? "none",
+        exp.recurring_from ?? null,
+        exp.pay_method ?? null,
         exp.created_at,
       ]
     );
@@ -783,7 +985,7 @@ export async function importBackup(data: BackupData): Promise<void> {
   if (Array.isArray(data.bills)) {
     for (const b of data.bills) {
       await db.execute(
-        "INSERT INTO bills (id, business_id, payee, amount, category, due_date, status, created_at) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)",
+        "INSERT INTO bills (id, business_id, payee, amount, category, due_date, status, pay_method, created_at) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)",
         [
           b.id,
           mapBiz(b.business_id),
@@ -792,6 +994,7 @@ export async function importBackup(data: BackupData): Promise<void> {
           b.category ?? "other",
           b.due_date,
           b.status,
+          b.pay_method ?? null,
           b.created_at,
         ]
       );
@@ -846,6 +1049,31 @@ export async function importBackup(data: BackupData): Promise<void> {
       await db.execute(
         "INSERT INTO contractor_payments (id, business_id, contractor_id, amount, date, note, created_at) VALUES ($1, $2, $3, $4, $5, $6, $7)",
         [p.id, mapBiz(p.business_id), cid, p.amount, p.date, p.note ?? "", p.created_at]
+      );
+    }
+  }
+
+  if (Array.isArray(data.services)) {
+    for (const s of data.services) {
+      await db.execute(
+        "INSERT INTO services (id, business_id, name, price, created_at) VALUES ($1, $2, $3, $4, $5)",
+        [s.id, mapBiz(s.business_id), s.name, s.price, s.created_at]
+      );
+    }
+  }
+  if (Array.isArray(data.timeEntries)) {
+    for (const te of data.timeEntries) {
+      await db.execute(
+        "INSERT INTO time_entries (id, business_id, customer, description, hours, date, invoiced, created_at) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)",
+        [te.id, mapBiz(te.business_id), te.customer, te.description ?? "", te.hours, te.date, te.invoiced ?? 0, te.created_at]
+      );
+    }
+  }
+  if (Array.isArray(data.trips)) {
+    for (const tr of data.trips) {
+      await db.execute(
+        "INSERT INTO trips (id, business_id, date, miles, purpose, created_at) VALUES ($1, $2, $3, $4, $5, $6)",
+        [tr.id, mapBiz(tr.business_id), tr.date, tr.miles, tr.purpose ?? "", tr.created_at]
       );
     }
   }

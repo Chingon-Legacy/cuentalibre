@@ -16,6 +16,9 @@ const en = {
     quotes: "Quotes",
     bills: "Bills",
     expenses: "Expenses",
+    services: "Services",
+    time: "Time",
+    mileage: "Mileage",
     customers: "Customers",
     contractors: "Contractors",
     reports: "Reports",
@@ -320,6 +323,7 @@ const en = {
     businessType: "Business type",
     businessName: "Business name",
     businessState: "Business state",
+    incomeGoal: "Monthly income goal",
     backupTitle: "Your data",
     saveWork: "Save work",
     saveWorkDesc: "Download a backup file to your computer.",
@@ -403,6 +407,15 @@ const en = {
     expensesT: "💸 Expenses",
     expensesB:
       "Expenses are what you spend to run your business — supplies, gas, tools. Logging them keeps your books honest and lowers your taxes. You can attach a photo of the receipt.",
+    servicesT: "🏷️ Services",
+    servicesB:
+      "Save what you sell with its price — a haircut, a lawn mowing, an hour of work. Then tap one on an invoice or quote and the price fills itself in.",
+    timeT: "⏱️ Time",
+    timeB:
+      "Log the hours you work for each customer. When it's time to bill, select the hours, set your hourly rate, and turn them into invoices in one tap.",
+    mileageT: "🚗 Mileage",
+    mileageB:
+      "Log your business drives — the date, miles, and why. The app multiplies them by the IRS standard rate to figure out your deduction, and adds it to your tax package.",
     customersT: "👥 Customers",
     customersB:
       "Everyone you've ever invoiced shows up here, with what they were billed, what they paid, and what they still owe.",
@@ -453,6 +466,11 @@ const en = {
     unpaidTitle: "Unpaid invoices at the end of {year}",
     unpaidNote: "These weren't paid yet, so they don't count as income this year.",
     noUnpaid: "None — every invoice was paid.",
+    mileageTitle: "Mileage deduction {year}",
+    mileageSub:
+      "Business miles driven, valued at the IRS standard rate in effect on each trip's date.",
+    noTrips: "No trips logged this year.",
+    milesLabel: "miles",
     total: "Total",
     preparedNote: "Prepared with CuentaLibre. Take this to your tax preparer.",
   },
@@ -472,6 +490,92 @@ const en = {
     create: "Add business",
     cancel: "Cancel",
   },
+
+  services: {
+    title: "Services",
+    new: "New service",
+    name: "Service name",
+    namePh: "e.g. Haircut",
+    price: "Price",
+    create: "Add service",
+    saveChanges: "Save changes",
+    edit: "Edit",
+    delete: "Delete",
+    confirmDelete: "Delete this service?",
+    cancel: "Cancel",
+    pick: "Pick a service…",
+    emptyTitle: "No services yet",
+    emptyBody:
+      "Save what you sell with its price. Then tap one to fill an invoice in a second.",
+  },
+
+  time: {
+    title: "Time",
+    new: "Log hours",
+    customer: "Customer",
+    customerPh: "Who did you work for?",
+    description: "What did you do?",
+    descriptionPh: "e.g. Lawn mowing",
+    hours: "Hours",
+    date: "Date",
+    save: "Save",
+    cancel: "Cancel",
+    delete: "Delete",
+    confirmDelete: "Delete this entry?",
+    uninvoiced: "Not invoiced yet",
+    invoiced: "Invoiced",
+    selected: "{n} selected",
+    createInvoice: "Create invoice",
+    rate: "Hourly rate",
+    ratePh: "e.g. 25",
+    total: "Total",
+    emptyTitle: "No hours logged yet",
+    emptyBody:
+      "Log the hours you work. When it's time to bill, turn them into an invoice in one tap.",
+    created: "Invoice created!",
+  },
+
+  mileage: {
+    title: "Mileage",
+    new: "Log a trip",
+    date: "Date",
+    miles: "Miles",
+    milesPh: "e.g. 12.5",
+    purpose: "Purpose",
+    purposePh: "e.g. Client visit, supply run",
+    save: "Save",
+    cancel: "Cancel",
+    delete: "Delete",
+    confirmDelete: "Delete this trip?",
+    deduction: "Deduction",
+    ytdTitle: "This year's deduction",
+    ytdSub:
+      "The IRS lets you deduct {rate} for every business mile you drive. This is your running total.",
+    perMile: "{rate}/mile",
+    export: "Export CSV",
+    emptyTitle: "No trips logged yet",
+    emptyBody:
+      "Log your business drives. The app figures out the IRS deduction for you.",
+  },
+
+  paymethod: {
+    label: "Payment method",
+    cash: "Cash",
+    card: "Card",
+    transfer: "Transfer",
+    check: "Check",
+    notSet: "Not set",
+    breakdown: "By payment method",
+  },
+
+  goal: {
+    cardTitle: "{month} goal",
+    of: "{done} of {goal}",
+    remaining: "{money} to go",
+    reached: "🎉 Goal reached! Amazing work.",
+    setPrompt: "Set a monthly income goal in Settings to track your progress here.",
+    monthFmt: "MMMM",
+  },
 };
 
 const es: typeof en = {
@@ -483,6 +587,9 @@ const es: typeof en = {
     quotes: "Cotizaciones",
     bills: "Cuentas",
     expenses: "Gastos",
+    services: "Servicios",
+    time: "Horas",
+    mileage: "Millaje",
     customers: "Clientes",
     contractors: "Contratistas",
     reports: "Reportes",
@@ -787,6 +894,7 @@ const es: typeof en = {
     businessType: "Tipo de negocio",
     businessName: "Nombre del negocio",
     businessState: "Estado del negocio",
+    incomeGoal: "Meta mensual de ingresos",
     backupTitle: "Tus datos",
     saveWork: "Guardar respaldo",
     saveWorkDesc: "Descarga un archivo de respaldo a tu computadora.",
@@ -870,6 +978,15 @@ const es: typeof en = {
     expensesT: "💸 Gastos",
     expensesB:
       "Los gastos son lo que gastas para operar tu negocio — materiales, gasolina, herramientas. Registrarlos mantiene tus cuentas en orden y baja tus impuestos. Puedes adjuntar una foto del recibo.",
+    servicesT: "🏷️ Servicios",
+    servicesB:
+      "Guarda lo que vendes con su precio — un corte de pelo, un corte de césped, una hora de trabajo. Luego toca uno en una factura o cotización y el precio se llena solo.",
+    timeT: "⏱️ Horas",
+    timeB:
+      "Registra las horas que trabajas para cada cliente. Cuando sea hora de cobrar, selecciona las horas, pon tu tarifa por hora y conviértelas en facturas con un toque.",
+    mileageT: "🚗 Millaje",
+    mileageB:
+      "Registra tus viajes de negocio — la fecha, las millas y el motivo. La app las multiplica por la tasa estándar del IRS para calcular tu deducción, y la agrega a tu paquete de impuestos.",
     customersT: "👥 Clientes",
     customersB:
       "Todas las personas a las que les has facturado aparecen aquí, con lo facturado, lo pagado y lo que aún deben.",
@@ -920,6 +1037,11 @@ const es: typeof en = {
     unpaidTitle: "Facturas sin pagar al final de {year}",
     unpaidNote: "Aún no fueron pagadas, así que no cuentan como ingresos este año.",
     noUnpaid: "Ninguna — todas las facturas fueron pagadas.",
+    mileageTitle: "Deducción por millaje {year}",
+    mileageSub:
+      "Millas de negocio manejadas, valoradas a la tasa estándar del IRS vigente en la fecha de cada viaje.",
+    noTrips: "No hay viajes registrados este año.",
+    milesLabel: "millas",
     total: "Total",
     preparedNote: "Preparado con CuentaLibre. Llévalo a tu preparador de impuestos.",
   },
@@ -938,6 +1060,92 @@ const es: typeof en = {
     next: "Continuar",
     create: "Agregar negocio",
     cancel: "Cancelar",
+  },
+
+  services: {
+    title: "Servicios",
+    new: "Nuevo servicio",
+    name: "Nombre del servicio",
+    namePh: "p. ej. Corte de pelo",
+    price: "Precio",
+    create: "Agregar servicio",
+    saveChanges: "Guardar cambios",
+    edit: "Editar",
+    delete: "Eliminar",
+    confirmDelete: "¿Eliminar este servicio?",
+    cancel: "Cancelar",
+    pick: "Elige un servicio…",
+    emptyTitle: "Aún no hay servicios",
+    emptyBody:
+      "Guarda lo que vendes con su precio. Luego toca uno para llenar una factura en un segundo.",
+  },
+
+  time: {
+    title: "Horas",
+    new: "Registrar horas",
+    customer: "Cliente",
+    customerPh: "¿Para quién trabajaste?",
+    description: "¿Qué hiciste?",
+    descriptionPh: "p. ej. Corte de césped",
+    hours: "Horas",
+    date: "Fecha",
+    save: "Guardar",
+    cancel: "Cancelar",
+    delete: "Eliminar",
+    confirmDelete: "¿Eliminar este registro?",
+    uninvoiced: "Aún no facturado",
+    invoiced: "Facturado",
+    selected: "{n} seleccionados",
+    createInvoice: "Crear factura",
+    rate: "Tarifa por hora",
+    ratePh: "p. ej. 25",
+    total: "Total",
+    emptyTitle: "Aún no registras horas",
+    emptyBody:
+      "Registra las horas que trabajas. Cuando sea hora de cobrar, conviértelas en factura con un toque.",
+    created: "¡Factura creada!",
+  },
+
+  mileage: {
+    title: "Millaje",
+    new: "Registrar un viaje",
+    date: "Fecha",
+    miles: "Millas",
+    milesPh: "p. ej. 12.5",
+    purpose: "Motivo",
+    purposePh: "p. ej. Visita a cliente, compra de materiales",
+    save: "Guardar",
+    cancel: "Cancelar",
+    delete: "Eliminar",
+    confirmDelete: "¿Eliminar este viaje?",
+    deduction: "Deducción",
+    ytdTitle: "Deducción de este año",
+    ytdSub:
+      "El IRS te permite deducir {rate} por cada milla de negocio que manejas. Este es tu total acumulado.",
+    perMile: "{rate}/milla",
+    export: "Exportar CSV",
+    emptyTitle: "Aún no registras viajes",
+    emptyBody:
+      "Registra tus viajes de negocio. La app calcula la deducción del IRS por ti.",
+  },
+
+  paymethod: {
+    label: "Método de pago",
+    cash: "Efectivo",
+    card: "Tarjeta",
+    transfer: "Transferencia",
+    check: "Cheque",
+    notSet: "Sin definir",
+    breakdown: "Por método de pago",
+  },
+
+  goal: {
+    cardTitle: "Meta de {month}",
+    of: "{done} de {goal}",
+    remaining: "Faltan {money}",
+    reached: "🎉 ¡Meta alcanzada! Increíble trabajo.",
+    setPrompt: "Pon una meta mensual de ingresos en Ajustes para ver tu progreso aquí.",
+    monthFmt: "MMMM",
   },
 };
 

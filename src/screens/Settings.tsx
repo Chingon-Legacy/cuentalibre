@@ -32,6 +32,7 @@ export default function Settings({ refresh }: { refresh: () => Promise<void> }) 
   const [remindersOn, setRemindersOn] = useState(true);
   const [showAddBiz, setShowAddBiz] = useState(false);
   const [name, setName] = useState("");
+  const [goal, setGoal] = useState("");
 
   useEffect(() => {
     getSetting("remindersOn")
@@ -43,6 +44,27 @@ export default function Settings({ refresh }: { refresh: () => Promise<void> }) 
   useEffect(() => {
     setName(active?.name ?? "");
   }, [activeId, active?.name]);
+
+  // Monthly income goal, stored per business.
+  useEffect(() => {
+    if (activeId == null) {
+      setGoal("");
+      return;
+    }
+    getSetting(`incomeGoal:${activeId}`)
+      .then((v) => setGoal(v ?? ""))
+      .catch(() => undefined);
+  }, [activeId]);
+
+  const saveGoal = () => {
+    if (activeId == null) return;
+    const v = goal.trim();
+    if (v !== "" && (Number.isNaN(parseFloat(v)) || parseFloat(v) < 0)) {
+      setGoal("");
+      return;
+    }
+    setSetting(`incomeGoal:${activeId}`, v).catch(() => undefined);
+  };
 
   const toggleReminders = async () => {
     const next = !remindersOn;
@@ -220,6 +242,27 @@ export default function Settings({ refresh }: { refresh: () => Promise<void> }) 
                 </option>
               ))}
             </select>
+          </div>
+        </div>
+
+        <div className="settings-row">
+          <div>
+            <div className="label">🎯 {t.settings.incomeGoal}</div>
+          </div>
+          <div className="field" style={{ minWidth: 220 }}>
+            <input
+              type="number"
+              min="0"
+              step="0.01"
+              value={goal}
+              placeholder="0.00"
+              aria-label={t.settings.incomeGoal}
+              onChange={(e) => setGoal(e.target.value)}
+              onBlur={saveGoal}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") (e.target as HTMLInputElement).blur();
+              }}
+            />
           </div>
         </div>
 

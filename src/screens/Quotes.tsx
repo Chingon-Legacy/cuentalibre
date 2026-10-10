@@ -4,10 +4,12 @@ import { addInvoice, addQuote, deleteQuote, setQuoteStatus, updateQuote } from "
 import { getStateInfo } from "../data/us-states";
 import { fmtDate, fmtMoney, useLang, useStrings } from "../i18n";
 import EmptyState from "../components/EmptyState";
-import type { Quote, QuoteStatus } from "../types";
+import ServicePicker from "../components/ServicePicker";
+import type { Quote, QuoteStatus, Service } from "../types";
 
 interface Props {
   quotes: Quote[];
+  services: Service[];
   refresh: () => Promise<void>;
 }
 
@@ -20,7 +22,7 @@ function plus14Days(): string {
   ).padStart(2, "0")}`;
 }
 
-export default function Quotes({ quotes, refresh }: Props) {
+export default function Quotes({ quotes, services, refresh }: Props) {
   const t = useStrings();
   const lang = useLang();
   const { pack, stateCode } = useBiz();
@@ -138,6 +140,10 @@ export default function Quotes({ quotes, refresh }: Props) {
             {editing ? t.quotes.editTitle : t.quotes.new}
           </h2>
           <div className="form-grid">
+            <ServicePicker
+              services={services}
+              onPick={(s) => setAmount(String(s.price))}
+            />
             <div className="field">
               <label>{t.quotes.customer}</label>
               <input

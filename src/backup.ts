@@ -32,6 +32,9 @@ export async function saveWork(): Promise<boolean> {
     quotes: all.quotes,
     contractors: all.contractors,
     contractorPayments: all.contractorPayments,
+    services: all.services,
+    timeEntries: all.timeEntries,
+    trips: all.trips,
   };
   const today = new Date().toISOString().slice(0, 10);
   const path = await save({

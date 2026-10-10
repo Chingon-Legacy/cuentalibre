@@ -18,11 +18,15 @@ import {
   getExpenses,
   getInvoices,
   getQuotes,
+  getServices,
   getSetting,
+  getTimeEntries,
+  getTrips,
   initDb,
   setActiveBusinessId,
   setSetting,
   updateBusiness,
+  generateRecurringExpenses,
   generateRecurringInvoices,
 } from "./db";
 import { getPack } from "./data/categories";
@@ -37,6 +41,9 @@ import type {
   Lang,
   Quote,
   Screen,
+  Service,
+  TimeEntry,
+  Trip,
 } from "./types";
 import { checkDueReminders, type ReminderStrings } from "./notify";
 import Tour, { type TourStep } from "./components/Tour";
@@ -48,6 +55,9 @@ import Invoices from "./screens/Invoices";
 import Quotes from "./screens/Quotes";
 import Bills from "./screens/Bills";
 import Expenses from "./screens/Expenses";
+import Services from "./screens/Services";
+import Time from "./screens/Time";
+import Mileage from "./screens/Mileage";
 import Customers from "./screens/Customers";
 import Contractors from "./screens/Contractors";
 import Reports from "./screens/Reports";
@@ -126,6 +136,9 @@ const NAV_ITEMS: { id: Screen; icon: string; label: (t: Strings) => string }[] =
   { id: "quotes", icon: "📝", label: (t) => t.nav.quotes },
   { id: "bills", icon: "📄", label: (t) => t.nav.bills },
   { id: "expenses", icon: "💸", label: (t) => t.nav.expenses },
+  { id: "services", icon: "🏷️", label: (t) => t.nav.services },
+  { id: "time", icon: "⏱️", label: (t) => t.nav.time },
+  { id: "mileage", icon: "🚗", label: (t) => t.nav.mileage },
   { id: "customers", icon: "👥", label: (t) => t.nav.customers },
   { id: "contractors", icon: "🤝", label: (t) => t.nav.contractors },
   { id: "reports", icon: "📊", label: (t) => t.nav.reports },
@@ -202,6 +215,9 @@ interface AppData {
   quotes: Quote[];
   contractors: Contractor[];
   contractorPayments: ContractorPayment[];
+  services: Service[];
+  timeEntries: TimeEntry[];
+  trips: Trip[];
 }
 
 const EMPTY_DATA: AppData = {
@@ -211,6 +227,9 @@ const EMPTY_DATA: AppData = {
   quotes: [],
   contractors: [],
   contractorPayments: [],
+  services: [],
+  timeEntries: [],
+  trips: [],
 };
 
 function Shell({
@@ -315,16 +334,25 @@ function Shell({
           <Home invoices={data.invoices} expenses={data.expenses} bills={data.bills} go={setScreen} />
         )}
         {ready && screen === "invoices" && (
-          <Invoices invoices={data.invoices} refresh={refresh} />
+          <Invoices invoices={data.invoices} services={data.services} refresh={refresh} />
         )}
         {ready && screen === "quotes" && (
-          <Quotes quotes={data.quotes} refresh={refresh} />
+          <Quotes quotes={data.quotes} services={data.services} refresh={refresh} />
         )}
         {ready && screen === "bills" && (
           <Bills bills={data.bills} refresh={refresh} />
         )}
         {ready && screen === "expenses" && (
           <Expenses expenses={data.expenses} refresh={refresh} />
+        )}
+        {ready && screen === "services" && (
+          <Services services={data.services} refresh={refresh} />
+        )}
+        {ready && screen === "time" && (
+          <Time entries={data.timeEntries} services={data.services} refresh={refresh} />
+        )}
+        {ready && screen === "mileage" && (
+          <Mileage trips={data.trips} refresh={refresh} />
         )}
         {ready && screen === "customers" && <Customers invoices={data.invoices} />}
         {ready && screen === "contractors" && (
@@ -340,6 +368,7 @@ function Shell({
             expenses={data.expenses}
             contractors={data.contractors}
             contractorPayments={data.contractorPayments}
+            trips={data.trips}
           />
         )}
         {ready && screen === "settings" && <Settings refresh={refresh} />}
@@ -404,7 +433,7 @@ export default function App() {
 
   /** Reloads every money list for the active business. */
   const refreshData = useCallback(async (): Promise<AppData> => {
-    const [invoices, expenses, bills, quotes, contractors, contractorPayments] =
+    const [invoices, expenses, bills, quotes, contractors, contractorPayments, services, timeEntries, trips] =
       await Promise.all([
         getInvoices(),
         getExpenses(),
@@ -412,8 +441,11 @@ export default function App() {
         getQuotes(),
         getContractors(),
         getContractorPayments(),
+        getServices(),
+        getTimeEntries(),
+        getTrips(),
       ]);
-    const next = { invoices, expenses, bills, quotes, contractors, contractorPayments };
+    const next = { invoices, expenses, bills, quotes, contractors, contractorPayments, services, timeEntries, trips };
     setData(next);
     return next;
   }, []);
@@ -543,6 +575,7 @@ export default function App() {
         // so it only processes this business's templates.
         pickActive(list);
         await generateRecurringInvoices();
+        await generateRecurringExpenses();
         const loaded = await refreshData();
         const remindersOn = await getSetting("remindersOn");
         if (remindersOn !== "0") {

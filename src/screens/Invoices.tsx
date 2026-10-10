@@ -4,10 +4,13 @@ import { addInvoice, calcTaxAmount, deleteInvoice, invoiceTotal, setInvoiceStatu
 import { getStateInfo } from "../data/us-states";
 import { fmtDate, fmtMoney, todayISO, useLang, useStrings } from "../i18n";
 import EmptyState from "../components/EmptyState";
-import type { Invoice, Recurrence } from "../types";
+import ServicePicker from "../components/ServicePicker";
+import PayMethodSelect from "../components/PayMethodSelect";
+import type { Invoice, PayMethod, Recurrence, Service } from "../types";
 
 interface Props {
   invoices: Invoice[];
+  services: Service[];
   refresh: () => Promise<void>;
 }
 
@@ -33,6 +36,15 @@ function InvoiceDetail({
   const late = inv.status === "waiting" && inv.due_date < today;
   const total = invoiceTotal(inv);
   const due = inv.status === "paid" ? 0 : total;
+  const payMethodLabel = !inv.pay_method
+    ? null
+    : inv.pay_method === "cash"
+      ? t.paymethod.cash
+      : inv.pay_method === "card"
+        ? t.paymethod.card
+        : inv.pay_method === "transfer"
+          ? t.paymethod.transfer
+          : t.paymethod.check;
   const ratePct =
     inv.tax_rate > 0
       ? `${(inv.tax_rate * 100).toFixed(2).replace(/\.?0+$/, "")}%`
@@ -76,6 +88,12 @@ function InvoiceDetail({
                     : t.invoices.waiting}
               </div>
             </div>
+            {payMethodLabel && (
+              <div>
+                <div className="label">{t.paymethod.label}</div>
+                <div className="value">{payMethodLabel}</div>
+              </div>
+            )}
           </div>
 
           <table className="report invoice-table">
@@ -120,7 +138,7 @@ function InvoiceDetail({
   );
 }
 
-export default function Invoices({ invoices, refresh }: Props) {
+export default function Invoices({ invoices, services, refresh }: Props) {
   const t = useStrings();
   const lang = useLang();
   const { pack, stateCode, bizName } = useBiz();
@@ -134,6 +152,7 @@ export default function Invoices({ invoices, refresh }: Props) {
   const [recurrence, setRecurrence] = useState<Recurrence>("none");
   const [taxOn, setTaxOn] = useState(false);
   const [taxRatePct, setTaxRatePct] = useState("");
+  const [payMethod, setPayMethod] = useState<PayMethod | null>(null);
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("all");
   const today = todayISO();
@@ -164,6 +183,7 @@ export default function Invoices({ invoices, refresh }: Props) {
     setRecurrence("none");
     setTaxOn(stateRatePct !== "");
     setTaxRatePct(stateRatePct);
+    setPayMethod(null);
     setEditing(null);
     setShowForm(false);
   };
@@ -177,6 +197,7 @@ export default function Invoices({ invoices, refresh }: Props) {
     // Default to the business state's base rate; 0%-tax states get no tax line.
     setTaxOn(stateRatePct !== "");
     setTaxRatePct(stateRatePct);
+    setPayMethod(null);
     setEditing(null);
     setShowForm(true);
   };
@@ -191,6 +212,7 @@ export default function Invoices({ invoices, refresh }: Props) {
     setTaxRatePct(
       inv.tax_rate > 0 ? (inv.tax_rate * 100).toFixed(2).replace(/\.?0+$/, "") : ""
     );
+    setPayMethod(inv.pay_method ?? null);
     setEditing(inv);
     setShowForm(true);
   };
@@ -207,6 +229,7 @@ export default function Invoices({ invoices, refresh }: Props) {
         category,
         due_date: dueDate,
         tax_rate: rate,
+        pay_method: payMethod,
       });
     } else {
       await addInvoice({
@@ -216,6 +239,7 @@ export default function Invoices({ invoices, refresh }: Props) {
         due_date: dueDate,
         recurrence,
         tax_rate: rate,
+        pay_method: payMethod,
       });
     }
     reset();
@@ -283,6 +307,10 @@ export default function Invoices({ invoices, refresh }: Props) {
             {editing ? t.invoices.editTitle : t.invoices.new}
           </h2>
           <div className="form-grid">
+            <ServicePicker
+              services={services}
+              onPick={(s) => setAmount(String(s.price))}
+            />
             <div className="field">
               <label>{t.invoices.customer}</label>
               <input
@@ -367,6 +395,7 @@ export default function Invoices({ invoices, refresh }: Props) {
                 </select>
               </div>
             )}
+            <PayMethodSelect value={payMethod} onChange={setPayMethod} />
           </div>
           <div className="form-actions">
             <button type="button" className="btn secondary" onClick={reset}>
