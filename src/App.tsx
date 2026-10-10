@@ -56,6 +56,7 @@ import type {
 import { checkDueReminders, type ReminderStrings } from "./notify";
 import Tour, { type TourStep } from "./components/Tour";
 import HelpPanel from "./components/HelpPanel";
+import MoreMenu, { type MoreMenuItem } from "./components/MoreMenu";
 import AddBusinessModal from "./components/AddBusinessModal";
 import Onboarding from "./screens/Onboarding";
 import Home from "./screens/Home";
@@ -170,6 +171,13 @@ const NAV_ITEMS: {
   { id: "settings", icon: "⚙️", label: (t) => t.nav.settings },
 ];
 
+/**
+ * Screens that are always visible in the nav bar. "donations" is appended
+ * for nonprofits only — it is handled separately in Shell because it is
+ * nonprofitOnly.
+ */
+const PRIMARY_IDS: Screen[] = ["home", "invoices", "expenses", "reports"];
+
 function LangToggle() {
   const { lang, setLang } = useLangState();
   return (
@@ -276,13 +284,70 @@ function Shell({
   const [screen, setScreen] = useState<Screen>("home");
   const [helpOpen, setHelpOpen] = useState(false);
   const [tourOpen, setTourOpen] = useState(false);
+  const [moreOpen, setMoreOpen] = useState(false); // desktop dropdown
+  const [sheetOpen, setSheetOpen] = useState(false); // mobile bottom sheet
+  const moreWrapRef = useRef<HTMLDivElement>(null);
   const { isNonprofit } = useBiz();
 
   // Nonprofit-only screens (Donations, Donors) appear only for nonprofits.
+  // Primary nav stays short: home, invoices, expenses, reports
+  // (+ donations for nonprofits). Everything else lives in the More menu.
   const navItems = useMemo(
     () => NAV_ITEMS.filter((item) => !item.nonprofitOnly || isNonprofit),
     [isNonprofit]
   );
+  const primaryItems = useMemo(
+    () =>
+      navItems.filter(
+        (item) =>
+          PRIMARY_IDS.includes(item.id) || (item.id === "donations" && isNonprofit)
+      ),
+    [navItems, isNonprofit]
+  );
+  const moreNavItems = useMemo(
+    () =>
+      navItems.filter(
+        (item) =>
+          !PRIMARY_IDS.includes(item.id) && !(item.id === "donations" && isNonprofit)
+      ),
+    [navItems, isNonprofit]
+  );
+
+  // The More menu tiles: icon + label + one warm line, in both languages.
+  const moreMenuItems: MoreMenuItem[] = useMemo(
+    () =>
+      moreNavItems.map((item) => ({
+        id: item.id,
+        icon: item.icon,
+        label: item.label(t),
+        desc: t.moreDesc[item.id as keyof typeof t.moreDesc],
+      })),
+    [moreNavItems, t]
+  );
+
+  /** True when the current screen lives inside the More menu. */
+  const moreActive = useMemo(
+    () => moreNavItems.some((item) => item.id === screen),
+    [moreNavItems, screen]
+  );
+
+  const selectScreen = useCallback((id: Screen) => {
+    setScreen(id);
+    setMoreOpen(false);
+    setSheetOpen(false);
+  }, []);
+
+  // Close the desktop dropdown when tapping anywhere outside it.
+  useEffect(() => {
+    if (!moreOpen) return;
+    const onDown = (e: MouseEvent) => {
+      if (moreWrapRef.current && !moreWrapRef.current.contains(e.target as Node)) {
+        setMoreOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", onDown);
+    return () => document.removeEventListener("mousedown", onDown);
+  }, [moreOpen]);
 
   // Switching between a for-profit and a nonprofit can hide the current
   // screen — fall back to Home so nobody lands on a blank page.
@@ -349,7 +414,7 @@ function Shell({
       <header className="app-header">
         <Brand />
         <nav className="main-nav">
-          {navItems.map((item) => (
+          {primaryItems.map((item) => (
             <button
               key={item.id}
               className={`nav-btn${screen === item.id ? " active" : ""}`}
@@ -359,6 +424,27 @@ function Shell({
             </button>
           ))}
         </nav>
+        <div className="more-wrap" ref={moreWrapRef}>
+          <button
+            type="button"
+            className={`nav-btn${moreOpen || moreActive ? " active" : ""}`}
+            onClick={() => setMoreOpen((o) => !o)}
+            aria-haspopup="menu"
+            aria-expanded={moreOpen}
+          >
+            <span aria-hidden="true">⋯</span> {t.nav.more}
+          </button>
+          {moreOpen && (
+            <MoreMenu
+              variant="dropdown"
+              items={moreMenuItems}
+              current={screen}
+              title={t.nav.more}
+              onSelect={selectScreen}
+              onClose={() => setMoreOpen(false)}
+            />
+          )}
+        </div>
         <div className="header-tools">
           <button
             type="button"
@@ -433,7 +519,7 @@ function Shell({
       </main>
 
       <nav className="mobile-nav">
-        {navItems.map((item) => (
+        {primaryItems.map((item) => (
           <button
             key={item.id}
             className={screen === item.id ? "active" : ""}
@@ -443,7 +529,29 @@ function Shell({
             {item.label(t)}
           </button>
         ))}
+        <button
+          type="button"
+          className={moreActive ? "active" : ""}
+          onClick={() => setSheetOpen(true)}
+          aria-haspopup="dialog"
+        >
+          <span className="micon" aria-hidden="true">
+            ⋯
+          </span>
+          {t.nav.more}
+        </button>
       </nav>
+
+      {sheetOpen && (
+        <MoreMenu
+          variant="sheet"
+          items={moreMenuItems}
+          current={screen}
+          title={t.nav.more}
+          onSelect={selectScreen}
+          onClose={() => setSheetOpen(false)}
+        />
+      )}
 
       {helpOpen && <HelpPanel onClose={() => setHelpOpen(false)} />}
       {tourOpen && ready && <Tour steps={tourSteps} onDone={closeTour} />}
