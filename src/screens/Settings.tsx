@@ -4,7 +4,7 @@ import { openBackup, saveWork } from "../backup";
 import { deleteBusiness, getSetting, setSetting } from "../db";
 import { businessTypes } from "../data/categories";
 import { US_STATES } from "../data/us-states";
-import { useLang, useStrings } from "../i18n";
+import { fmtDate, useLang, useStrings } from "../i18n";
 import AddBusinessModal from "../components/AddBusinessModal";
 import type { Business, Lang } from "../types";
 
@@ -33,6 +33,8 @@ export default function Settings({ refresh }: { refresh: () => Promise<void> }) 
   const [showAddBiz, setShowAddBiz] = useState(false);
   const [name, setName] = useState("");
   const [goal, setGoal] = useState("");
+  const [taxJar, setTaxJar] = useState("25");
+  const [lastBackupAt, setLastBackupAt] = useState<string | null>(null);
 
   useEffect(() => {
     getSetting("remindersOn")
@@ -65,6 +67,37 @@ export default function Settings({ refresh }: { refresh: () => Promise<void> }) 
     }
     setSetting(`incomeGoal:${activeId}`, v).catch(() => undefined);
   };
+
+  // Tax-jar percent, stored per business; 25% when empty or invalid.
+  useEffect(() => {
+    if (activeId == null) {
+      setTaxJar("25");
+      return;
+    }
+    getSetting(`taxJarPercent:${activeId}`)
+      .then((v) => setTaxJar(v ?? "25"))
+      .catch(() => undefined);
+  }, [activeId]);
+
+  const saveTaxJar = () => {
+    if (activeId == null) return;
+    const v = taxJar.trim();
+    const n = parseFloat(v);
+    if (v === "" || Number.isNaN(n) || n < 0 || n > 100) {
+      setTaxJar("25");
+      setSetting(`taxJarPercent:${activeId}`, "25").catch(() => undefined);
+      return;
+    }
+    setSetting(`taxJarPercent:${activeId}`, v).catch(() => undefined);
+  };
+
+  const loadLastBackupAt = () => {
+    getSetting("lastBackupAt")
+      .then((v) => setLastBackupAt(v ?? null))
+      .catch(() => undefined);
+  };
+
+  useEffect(loadLastBackupAt, []);
 
   const toggleReminders = async () => {
     const next = !remindersOn;
@@ -119,7 +152,10 @@ export default function Settings({ refresh }: { refresh: () => Promise<void> }) 
     setNote(null);
     try {
       const ok = await saveWork();
-      if (ok) setNote({ msg: t.settings.saved, error: false });
+      if (ok) {
+        setNote({ msg: t.settings.saved, error: false });
+        loadLastBackupAt();
+      }
     } catch {
       setNote({ msg: t.settings.restoreFailed, error: true });
     } finally {
@@ -266,6 +302,29 @@ export default function Settings({ refresh }: { refresh: () => Promise<void> }) 
           </div>
         </div>
 
+        <div className="settings-row">
+          <div>
+            <div className="label">🏦 {t.settings.taxJarTitle}</div>
+            <div className="desc">{t.settings.taxJarDesc}</div>
+          </div>
+          <div className="field" style={{ minWidth: 220 }}>
+            <input
+              type="number"
+              min="0"
+              max="100"
+              step="1"
+              value={taxJar}
+              placeholder="25"
+              aria-label={t.settings.taxJarPercent}
+              onChange={(e) => setTaxJar(e.target.value)}
+              onBlur={saveTaxJar}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") (e.target as HTMLInputElement).blur();
+              }}
+            />
+          </div>
+        </div>
+
         <ul className="row-list biz-list">
           {businesses.map((b) => (
             <li key={b.id}>
@@ -321,6 +380,11 @@ export default function Settings({ refresh }: { refresh: () => Promise<void> }) 
             {working ? t.settings.working : t.settings.openBackup}
           </button>
         </div>
+        <p className="desc" style={{ margin: "8px 0 0" }}>
+          {lastBackupAt
+            ? t.settings.lastBackup.replace("{date}", fmtDate(lastBackupAt.slice(0, 10), lang))
+            : t.settings.neverBackedUp}
+        </p>
         {note && <p className={`status-note${note.error ? " error" : ""}`}>{note.msg}</p>}
       </div>
 

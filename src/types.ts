@@ -12,7 +12,8 @@ export type Screen =
   | "reports"
   | "settings"
   | "customers"
-  | "contractors";
+  | "contractors"
+  | "loans";
 
 export type InvoiceStatus = "waiting" | "paid";
 
@@ -137,6 +138,27 @@ export interface Trip {
   created_at: string;
 }
 
+/** Money borrowed, tracked simply: amount, payments, balance left. */
+export interface Loan {
+  id: number;
+  business_id: number;
+  name: string;
+  borrowed_amount: number;
+  date_borrowed: string; // YYYY-MM-DD
+  note: string;
+  created_at: string;
+}
+
+export interface LoanPayment {
+  id: number;
+  business_id: number;
+  loan_id: number;
+  amount: number;
+  date: string; // YYYY-MM-DD
+  note: string;
+  created_at: string;
+}
+
 export interface BackupData {
   app: "cuentalibre";
   version: 2;
@@ -155,4 +177,6 @@ export interface BackupData {
   services?: Service[];
   timeEntries?: TimeEntry[];
   trips?: Trip[];
+  loans?: Loan[];
+  loanPayments?: LoanPayment[];
 }

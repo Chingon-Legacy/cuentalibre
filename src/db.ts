@@ -8,6 +8,8 @@ import type {
   Expense,
   Invoice,
   InvoiceStatus,
+  Loan,
+  LoanPayment,
   PayMethod,
   Quote,
   QuoteStatus,
@@ -122,6 +124,8 @@ const MONEY_TABLES = [
   "services",
   "time_entries",
   "trips",
+  "loans",
+  "loan_payments",
 ] as const;
 
 export async function initDb(): Promise<void> {
@@ -243,6 +247,28 @@ export async function initDb(): Promise<void> {
       date TEXT NOT NULL,
       miles REAL NOT NULL,
       purpose TEXT NOT NULL DEFAULT '',
+      created_at TEXT NOT NULL
+    )
+  `);
+  await db.execute(`
+    CREATE TABLE IF NOT EXISTS loans (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      business_id INTEGER NOT NULL DEFAULT 1,
+      name TEXT NOT NULL,
+      borrowed_amount REAL NOT NULL,
+      date_borrowed TEXT NOT NULL,
+      note TEXT NOT NULL DEFAULT '',
+      created_at TEXT NOT NULL
+    )
+  `);
+  await db.execute(`
+    CREATE TABLE IF NOT EXISTS loan_payments (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      business_id INTEGER NOT NULL DEFAULT 1,
+      loan_id INTEGER NOT NULL,
+      amount REAL NOT NULL,
+      date TEXT NOT NULL,
+      note TEXT NOT NULL DEFAULT '',
       created_at TEXT NOT NULL
     )
   `);
@@ -859,6 +885,64 @@ export async function deleteTrip(id: number): Promise<void> {
   await db.execute(`DELETE FROM trips WHERE id = $1 ${bizFilterAnd()}`, [id]);
 }
 
+// ---- loans (money borrowed) ----
+
+export async function getLoans(): Promise<Loan[]> {
+  const db = await getDb();
+  return db.select<Loan[]>(`SELECT * FROM loans ${bizFilter()} ORDER BY date_borrowed DESC`);
+}
+
+export async function addLoan(input: {
+  name: string;
+  borrowed_amount: number;
+  date_borrowed: string;
+  note: string;
+}): Promise<number> {
+  const db = await getDb();
+  const res = await db.execute(
+    "INSERT INTO loans (business_id, name, borrowed_amount, date_borrowed, note, created_at) VALUES ($1, $2, $3, $4, $5, $6)",
+    [activeBusinessId, input.name, input.borrowed_amount, input.date_borrowed, input.note, new Date().toISOString()]
+  );
+  return Number(res.lastInsertId ?? 0);
+}
+
+export async function deleteLoan(id: number): Promise<void> {
+  const db = await getDb();
+  await db.execute(`DELETE FROM loan_payments WHERE loan_id = $1 ${bizFilterAnd()}`, [id]);
+  await db.execute(`DELETE FROM loans WHERE id = $1 ${bizFilterAnd()}`, [id]);
+}
+
+export async function getLoanPayments(loanId?: number): Promise<LoanPayment[]> {
+  const db = await getDb();
+  if (loanId == null) {
+    return db.select<LoanPayment[]>(
+      `SELECT * FROM loan_payments ${bizFilter()} ORDER BY date DESC`
+    );
+  }
+  return db.select<LoanPayment[]>(
+    `SELECT * FROM loan_payments WHERE loan_id = $1 ${bizFilterAnd()} ORDER BY date DESC`,
+    [loanId]
+  );
+}
+
+export async function addLoanPayment(input: {
+  loan_id: number;
+  amount: number;
+  date: string;
+  note: string;
+}): Promise<void> {
+  const db = await getDb();
+  await db.execute(
+    "INSERT INTO loan_payments (business_id, loan_id, amount, date, note, created_at) VALUES ($1, $2, $3, $4, $5, $6)",
+    [activeBusinessId, input.loan_id, input.amount, input.date, input.note, new Date().toISOString()]
+  );
+}
+
+export async function deleteLoanPayment(id: number): Promise<void> {
+  const db = await getDb();
+  await db.execute(`DELETE FROM loan_payments WHERE id = $1 ${bizFilterAnd()}`, [id]);
+}
+
 // ---- full export (unfiltered) for backups ----
 
 export interface AllData {
@@ -872,11 +956,13 @@ export interface AllData {
   services: Service[];
   timeEntries: TimeEntry[];
   trips: Trip[];
+  loans: Loan[];
+  loanPayments: LoanPayment[];
 }
 
 export async function exportAllData(): Promise<AllData> {
   const db = await getDb();
-  const [businesses, invoices, expenses, bills, quotes, contractors, contractorPayments, services, timeEntries, trips] =
+  const [businesses, invoices, expenses, bills, quotes, contractors, contractorPayments, services, timeEntries, trips, loans, loanPayments] =
     await Promise.all([
       db.select<Business[]>("SELECT * FROM businesses ORDER BY id ASC"),
       db.select<Invoice[]>("SELECT * FROM invoices ORDER BY id ASC"),
@@ -888,8 +974,10 @@ export async function exportAllData(): Promise<AllData> {
       db.select<Service[]>("SELECT * FROM services ORDER BY id ASC"),
       db.select<TimeEntry[]>("SELECT * FROM time_entries ORDER BY id ASC"),
       db.select<Trip[]>("SELECT * FROM trips ORDER BY id ASC"),
+      db.select<Loan[]>("SELECT * FROM loans ORDER BY id ASC"),
+      db.select<LoanPayment[]>("SELECT * FROM loan_payments ORDER BY id ASC"),
     ]);
-  return { businesses, invoices, expenses, bills, quotes, contractors, contractorPayments, services, timeEntries, trips };
+  return { businesses, invoices, expenses, bills, quotes, contractors, contractorPayments, services, timeEntries, trips, loans, loanPayments };
 }
 
 // ---- backup / restore ----
@@ -1074,6 +1162,26 @@ export async function importBackup(data: BackupData): Promise<void> {
       await db.execute(
         "INSERT INTO trips (id, business_id, date, miles, purpose, created_at) VALUES ($1, $2, $3, $4, $5, $6)",
         [tr.id, mapBiz(tr.business_id), tr.date, tr.miles, tr.purpose ?? "", tr.created_at]
+      );
+    }
+  }
+  const loanIdMap = new Map<number, number>();
+  if (Array.isArray(data.loans)) {
+    for (const l of data.loans) {
+      await db.execute(
+        "INSERT INTO loans (id, business_id, name, borrowed_amount, date_borrowed, note, created_at) VALUES ($1, $2, $3, $4, $5, $6, $7)",
+        [l.id, mapBiz(l.business_id), l.name, l.borrowed_amount, l.date_borrowed, l.note ?? "", l.created_at]
+      );
+      loanIdMap.set(l.id, l.id); // explicit ids preserved
+    }
+  }
+  if (Array.isArray(data.loanPayments)) {
+    for (const p of data.loanPayments) {
+      const lid = loanIdMap.get(p.loan_id);
+      if (lid == null) continue; // orphan payment — skip
+      await db.execute(
+        "INSERT INTO loan_payments (id, business_id, loan_id, amount, date, note, created_at) VALUES ($1, $2, $3, $4, $5, $6, $7)",
+        [p.id, mapBiz(p.business_id), lid, p.amount, p.date, p.note ?? "", p.created_at]
       );
     }
   }

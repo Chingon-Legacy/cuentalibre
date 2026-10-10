@@ -1,9 +1,10 @@
-import { useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { open } from "@tauri-apps/plugin-dialog";
 import { readTextFile } from "@tauri-apps/plugin-fs";
 import { useBiz } from "../App";
 import { addExpense } from "../db";
 import { isTauri } from "../photos";
+import { daysBetween, normStr } from "../dupes";
 import {
   detectAmountColumn,
   detectDateColumn,
@@ -32,6 +33,9 @@ interface ParsedRow {
  * Import bank transactions from a CSV file.
  * Steps: pick file → match columns → review & import.
  * Exact duplicates (same date + description + amount) are skipped.
+ * Possible duplicates (same amount + same description within 3 days) are
+ * flagged with a badge and left UNCHECKED so the user can review them.
+ * Nothing is ever blocked: unchecked rows are simply not imported.
  */
 export default function CsvImport({ expenses, onDone, onClose }: Props) {
   const t = useStrings();
@@ -74,6 +78,71 @@ export default function CsvImport({ expenses, onDone, onClose }: Props) {
 
   const validRows = useMemo(() => parsed.filter((p) => p.valid), [parsed]);
 
+  /** The expense amount a parsed row would import as, or null if the sign
+   *  convention means it will not become an expense (mirrors doImport). */
+  const rowExpenseValue = (p: ParsedRow): number | null => {
+    if (spendingNegative) {
+      return p.amount < 0 ? Math.abs(p.amount) : null;
+    }
+    return p.amount > 0 ? p.amount : null;
+  };
+
+  /**
+   * Indexes (into validRows) of possible duplicates: same amount AND same
+   * normalized description AND |date difference| ≤ 3 days. Exact duplicates
+   * are excluded — they keep the silent skip behavior, unchanged.
+   */
+  const possibleIdx = useMemo(() => {
+    const idx = new Set<number>();
+    validRows.forEach((p, i) => {
+      const value = rowExpenseValue(p);
+      if (value === null) return;
+      const key = `${p.date}|${p.description.toLowerCase()}|${Math.round(value * 100)}`;
+      if (existing.has(key)) return; // exact duplicate: skip as before
+      const cents = Math.round(value * 100);
+      const desc = normStr(p.description);
+      for (const e of expenses) {
+        if (
+          Math.round(e.amount * 100) === cents &&
+          normStr(e.description) === desc &&
+          Math.abs(daysBetween(e.date, p.date)) <= 3
+        ) {
+          idx.add(i);
+          break;
+        }
+      }
+    });
+    return idx;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [validRows, expenses, existing, spendingNegative]);
+
+  /** Indexes (into validRows) the user has unchecked = will NOT be imported.
+   *  Possible duplicates start unchecked; everything else starts checked. */
+  const [unchecked, setUnchecked] = useState<Set<number>>(new Set());
+  useEffect(() => {
+    setUnchecked(new Set(possibleIdx));
+  }, [possibleIdx]);
+
+  const toggleRow = (i: number) => {
+    setUnchecked((prev) => {
+      const next = new Set(prev);
+      if (next.has(i)) next.delete(i);
+      else next.add(i);
+      return next;
+    });
+  };
+
+  /** Preview order: possible duplicates grouped first, rest in file order. */
+  const displayRows = useMemo(
+    () =>
+      validRows
+        .map((p, i) => ({ p, i }))
+        .sort((a, b) => Number(possibleIdx.has(b.i)) - Number(possibleIdx.has(a.i))),
+    [validRows, possibleIdx]
+  );
+
+  const checkedCount = validRows.length - unchecked.size;
+
   const loadText = (text: string) => {
     const rows = parseCsv(text);
     if (rows.length < 2) {
@@ -112,7 +181,12 @@ export default function CsvImport({ expenses, onDone, onClose }: Props) {
     setImporting(true);
     let imported = 0;
     let skipped = 0;
-    for (const p of validRows) {
+    for (let i = 0; i < validRows.length; i++) {
+      if (unchecked.has(i)) {
+        skipped++; // user unchecked it in the review step
+        continue;
+      }
+      const p = validRows[i];
       // Normalize to a positive expense amount based on the bank's sign convention.
       let value: number | null = null;
       if (spendingNegative) {
@@ -255,18 +329,50 @@ export default function CsvImport({ expenses, onDone, onClose }: Props) {
           {ready && validRows.length > 0 && (
             <>
               <h3>{t.csvimport.preview}</h3>
+              {possibleIdx.size > 0 && (
+                <>
+                  <h4 style={{ marginBottom: 4, marginTop: 12 }}>
+                    🔎 {t.dupes.reviewTitle}
+                  </h4>
+                  <p className="tax-note" style={{ marginBottom: 4 }}>
+                    {t.dupes.reviewSub}
+                  </p>
+                </>
+              )}
               <ul className="row-list">
-                {validRows.slice(0, 8).map((p, i) => (
-                  <li key={i}>
-                    <div className="row-main">
-                      <div className="row-title">{p.description}</div>
-                      <div className="row-sub">{p.date}</div>
-                    </div>
-                    <span className="row-amount negative">
-                      -{fmtMoney(Math.abs(p.amount), lang)}
-                    </span>
-                  </li>
-                ))}
+                {displayRows.map(({ p, i }) => {
+                  const possible = possibleIdx.has(i);
+                  const checked = !unchecked.has(i);
+                  return (
+                    <li key={i}>
+                      <label className="check-row" style={{ margin: 0 }}>
+                        <input
+                          type="checkbox"
+                          checked={checked}
+                          onChange={() => toggleRow(i)}
+                          aria-label={p.description}
+                        />
+                      </label>
+                      <div className="row-main">
+                        <div className="row-title">
+                          {p.description}
+                          {possible && (
+                            <span
+                              className="badge waiting"
+                              style={{ marginLeft: 8 }}
+                            >
+                              {t.dupes.possibleBadge}
+                            </span>
+                          )}
+                        </div>
+                        <div className="row-sub">{p.date}</div>
+                      </div>
+                      <span className="row-amount negative">
+                        -{fmtMoney(Math.abs(p.amount), lang)}
+                      </span>
+                    </li>
+                  );
+                })}
               </ul>
             </>
           )}
@@ -281,10 +387,10 @@ export default function CsvImport({ expenses, onDone, onClose }: Props) {
             <button
               type="button"
               className="btn"
-              disabled={!ready || validRows.length === 0 || importing}
+              disabled={!ready || checkedCount === 0 || importing}
               onClick={doImport}
             >
-              {importing ? t.settings.working : `${t.csvimport.import} (${validRows.length})`}
+              {importing ? t.settings.working : `${t.csvimport.import} (${checkedCount})`}
             </button>
           </div>
         </>

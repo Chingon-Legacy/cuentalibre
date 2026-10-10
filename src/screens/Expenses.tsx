@@ -11,6 +11,7 @@ import {
   type PickedImage,
 } from "../photos";
 import { fmtDate, fmtMoney, todayISO, useLang, useStrings } from "../i18n";
+import { daysBetween, normStr } from "../dupes";
 import EmptyState from "../components/EmptyState";
 import PayMethodSelect from "../components/PayMethodSelect";
 import type { Expense, PayMethod, Recurrence } from "../types";
@@ -76,6 +77,8 @@ export default function Expenses({ expenses, refresh }: Props) {
   const [photoCleared, setPhotoCleared] = useState(false);
   const [viewingPhoto, setViewingPhoto] = useState<string | null>(null);
   const browserFileInput = useRef<HTMLInputElement>(null);
+  // Non-blocking duplicate warning: the matching existing expense, if any.
+  const [dupeWarn, setDupeWarn] = useState<Expense | null>(null);
 
   const catLabel = (id: string) => {
     const c = pack.expense.find((x) => x.id === id);
@@ -99,6 +102,7 @@ export default function Expenses({ expenses, refresh }: Props) {
     setPayMethod(null);
     setEditing(null);
     setShowForm(false);
+    setDupeWarn(null);
     resetPhoto();
   };
 
@@ -110,6 +114,7 @@ export default function Expenses({ expenses, refresh }: Props) {
     setRecurrence("none");
     setPayMethod(null);
     setEditing(null);
+    setDupeWarn(null);
     resetPhoto();
     setShowForm(true);
   };
@@ -122,6 +127,7 @@ export default function Expenses({ expenses, refresh }: Props) {
     setRecurrence("none");
     setPayMethod(e.pay_method ?? null);
     setEditing(e);
+    setDupeWarn(null);
     setPhotoCurrent(e.photo);
     setPhotoNew(null);
     setPhotoNewUrl(null);
@@ -164,7 +170,32 @@ export default function Expenses({ expenses, refresh }: Props) {
     setPhotoCleared(true);
   };
 
-  const save = async () => {
+  /** Finds an existing expense that looks like a duplicate of the form:
+   *  same amount, same normalized description, date within the last 7 days
+   *  (including the entered date). Excludes the record being edited. */
+  const findExpenseDupe = (): Expense | null => {
+    const value = parseFloat(amount);
+    if (Number.isNaN(value)) return null;
+    const cents = Math.round(value * 100);
+    const desc = normStr(description);
+    if (!desc) return null;
+    const entered = date;
+    return (
+      expenses.find((e) => {
+        if (editing && e.id === editing.id) return false;
+        const d = daysBetween(e.date, entered);
+        return (
+          Math.round(e.amount * 100) === cents &&
+          normStr(e.description) === desc &&
+          d >= 0 &&
+          d <= 7
+        );
+      }) ?? null
+    );
+  };
+
+  /** Persists the form. Only called after validation and the duplicate check. */
+  const doSave = async () => {
     const value = parseFloat(amount);
     if (!description.trim() || Number.isNaN(value) || value <= 0) return;
     const rounded = Math.round(value * 100) / 100;
@@ -206,6 +237,21 @@ export default function Expenses({ expenses, refresh }: Props) {
     }
     reset();
     await refresh();
+  };
+
+  /** Validates the form, then shows a friendly non-blocking duplicate warning
+   *  before saving (never prevents the save — "Save anyway" always works). */
+  const save = async () => {
+    const value = parseFloat(amount);
+    if (!description.trim() || Number.isNaN(value) || value <= 0) return;
+    if (!dupeWarn) {
+      const dup = findExpenseDupe();
+      if (dup) {
+        setDupeWarn(dup);
+        return;
+      }
+    }
+    await doSave();
   };
 
   const remove = async (e: Expense) => {
@@ -352,6 +398,44 @@ export default function Expenses({ expenses, refresh }: Props) {
               />
             </div>
           </div>
+          {dupeWarn && (
+            <div
+              role="alert"
+              style={{
+                background: "var(--amber-light)",
+                border: "1px solid var(--amber)",
+                borderRadius: 9,
+                padding: "12px 14px",
+                margin: "4px 0 12px",
+              }}
+            >
+              <p
+                style={{
+                  margin: "0 0 10px",
+                  fontWeight: 600,
+                  color: "var(--amber)",
+                }}
+              >
+                ⚠️{" "}
+                {t.dupes.warnExpense
+                  .replace("{money}", fmtMoney(parseFloat(amount) || 0, lang))
+                  .replace("{desc}", description.trim())
+                  .replace("{date}", fmtDate(dupeWarn.date, lang))}
+              </p>
+              <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+                <button type="button" className="btn" onClick={doSave}>
+                  {t.dupes.saveAnyway}
+                </button>
+                <button
+                  type="button"
+                  className="btn secondary"
+                  onClick={() => setDupeWarn(null)}
+                >
+                  {t.dupes.keepEditing}
+                </button>
+              </div>
+            </div>
+          )}
           <div className="form-actions">
             <button type="button" className="btn secondary" onClick={reset}>
               {t.expenses.cancel}

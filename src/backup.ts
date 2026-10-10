@@ -5,6 +5,7 @@ import {
   getActiveBusinessId,
   getBusinesses,
   importBackup,
+  setSetting,
 } from "./db";
 import type { BackupData } from "./types";
 
@@ -35,6 +36,8 @@ export async function saveWork(): Promise<boolean> {
     services: all.services,
     timeEntries: all.timeEntries,
     trips: all.trips,
+    loans: all.loans,
+    loanPayments: all.loanPayments,
   };
   const today = new Date().toISOString().slice(0, 10);
   const path = await save({
@@ -43,6 +46,8 @@ export async function saveWork(): Promise<boolean> {
   });
   if (!path) return false;
   await writeTextFile(path, JSON.stringify(data, null, 2));
+  // Remember when the last successful backup happened (drives the Home nudge).
+  await setSetting("lastBackupAt", new Date().toISOString()).catch(() => undefined);
   return true;
 }
 

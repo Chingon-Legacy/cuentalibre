@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { fmtDate, fmtMoney, todayISO, useLang, useStrings } from "../i18n";
 import { useBiz } from "../App";
+import { saveWork } from "../backup";
 import { getSetting, invoiceTotal } from "../db";
 import type { Bill, Expense, Invoice, Screen } from "../types";
 
@@ -322,6 +323,170 @@ function GoalCard({ invoices }: { invoices: Invoice[] }) {
   );
 }
 
+/** Gentle reminder to save a backup when the last one is 14+ days old. */
+function BackupNudge() {
+  const t = useStrings();
+  const [dismissed, setDismissed] = useState(false);
+  const [stale, setStale] = useState(false);
+
+  const check = () => {
+    getSetting("lastBackupAt")
+      .then((v) => {
+        const cutoff = new Date(Date.now() - 14 * 24 * 60 * 60 * 1000).toISOString();
+        setStale(!v || v < cutoff);
+      })
+      .catch(() => undefined);
+  };
+
+  useEffect(check, []);
+
+  if (dismissed || !stale) return null;
+
+  return (
+    <div className="panel">
+      <h2 style={{ marginTop: 0 }}>{t.home.backupNudgeTitle}</h2>
+      <p style={{ margin: "4px 0 12px" }}>{t.home.backupNudge}</p>
+      <div className="form-actions" style={{ justifyContent: "flex-start" }}>
+        <button
+          type="button"
+          className="btn"
+          onClick={async () => {
+            const ok = await saveWork();
+            if (ok) check();
+          }}
+        >
+          {t.home.saveNow}
+        </button>
+        <button type="button" className="btn secondary" onClick={() => setDismissed(true)}>
+          {t.home.dismiss}
+        </button>
+      </div>
+    </div>
+  );
+}
+
+/** Friendly "tax savings jar": set aside a % of this month's paid income. */
+function TaxJarCard({ invoices }: { invoices: Invoice[] }) {
+  const t = useStrings();
+  const lang = useLang();
+  const { activeId } = useBiz();
+  const [pct, setPct] = useState(25);
+
+  useEffect(() => {
+    if (activeId == null) return;
+    getSetting(`taxJarPercent:${activeId}`)
+      .then((v) => {
+        const n = v ? parseFloat(v) : NaN;
+        setPct(!Number.isNaN(n) && n >= 0 && n <= 100 ? n : 25);
+      })
+      .catch(() => setPct(25));
+  }, [activeId]);
+
+  const mk = monthKey(0);
+  const income = invoices
+    .filter((i) => i.status === "paid" && i.due_date.startsWith(mk))
+    .reduce((s, i) => s + invoiceTotal(i), 0);
+
+  return (
+    <div className="panel">
+      <h2 style={{ marginTop: 0 }}>🏦 {t.taxjar.title}</h2>
+      {income <= 0 ? (
+        <p style={{ margin: 0 }}>{t.taxjar.noIncome}</p>
+      ) : (
+        <>
+          <p style={{ margin: "4px 0 8px" }}>
+            <strong>
+              {t.taxjar.setAside.replace("{money}", fmtMoney((income * pct) / 100, lang))}
+            </strong>
+          </p>
+          <p className="row-sub" style={{ margin: "0 0 8px" }}>
+            {t.taxjar.basedOn
+              .replace("{money}", fmtMoney(income, lang))
+              .replace("{pct}", String(pct))}
+          </p>
+          <p className="row-sub" style={{ margin: 0, fontSize: 13 }}>
+            {t.taxjar.note}
+          </p>
+        </>
+      )}
+    </div>
+  );
+}
+
+/** Percent change of this year's year-to-date value vs last year's. */
+function yoyDir(
+  thisV: number,
+  lastV: number
+): { dir: "up" | "down" | "same"; pct: number } {
+  if (lastV === 0) return thisV > 0 ? { dir: "up", pct: 100 } : { dir: "same", pct: 0 };
+  const pct = Math.round(((thisV - lastV) / lastV) * 100);
+  if (Math.abs(pct) <= 5) return { dir: "same", pct: 0 };
+  return pct > 0 ? { dir: "up", pct } : { dir: "down", pct: -pct };
+}
+
+/** Year-over-year: this year to date vs the same stretch last year. */
+function YoYCard({ invoices, expenses }: { invoices: Invoice[]; expenses: Expense[] }) {
+  const t = useStrings();
+  const lang = useLang();
+  const today = todayISO();
+  const y = today.slice(0, 4);
+  const lastY = String(Number(y) - 1);
+  const lastEnd = `${lastY}${today.slice(4)}`;
+
+  const inRange = (d: string, start: string, end: string) => d >= start && d <= end;
+
+  const ytdIncome = (last: boolean) =>
+    invoices
+      .filter(
+        (i) =>
+          i.status === "paid" &&
+          inRange(i.due_date, `${last ? lastY : y}-01-01`, last ? lastEnd : today)
+      )
+      .reduce((s, i) => s + invoiceTotal(i), 0);
+
+  const ytdOut = (last: boolean) =>
+    expenses
+      .filter((e) =>
+        inRange(e.date, `${last ? lastY : y}-01-01`, last ? lastEnd : today)
+      )
+      .reduce((s, e) => s + e.amount, 0);
+
+  const lastIncome = ytdIncome(true);
+  const lastOut = ytdOut(true);
+  if (lastIncome === 0 && lastOut === 0) return null;
+
+  const inc = yoyDir(ytdIncome(false), lastIncome);
+  const out = yoyDir(ytdOut(false), lastOut);
+
+  const incomeLine =
+    inc.dir === "same"
+      ? t.yoy.incomeSame
+      : (inc.dir === "up" ? t.yoy.incomeUp : t.yoy.incomeDown).replace(
+          "{pct}",
+          String(inc.pct)
+        );
+  const outLine =
+    out.dir === "same"
+      ? t.yoy.expensesSame
+      : (out.dir === "up" ? t.yoy.expensesUp : t.yoy.expensesDown).replace(
+          "{pct}",
+          String(out.pct)
+        );
+
+  return (
+    <div className="panel">
+      <h2 style={{ marginTop: 0 }}>📊 {t.yoy.title}</h2>
+      <p className="row-sub" style={{ margin: "0 0 8px" }}>
+        {t.yoy.ytdNote.replace("{date}", fmtDate(today, lang))}
+      </p>
+      <ul className="insight-list">
+        <li>{incomeLine}</li>
+        <li>{outLine}</li>
+      </ul>
+    </div>
+  );
+}
+
 export default function Home({ invoices, expenses, bills, go }: Props) {
   const t = useStrings();
   const lang = useLang();
@@ -369,7 +534,13 @@ export default function Home({ invoices, expenses, bills, go }: Props) {
 
       <Insights invoices={invoices} expenses={expenses} bills={bills} />
 
+      <BackupNudge />
+
       <GoalCard invoices={invoices} />
+
+      <TaxJarCard invoices={invoices} />
+
+      <YoYCard invoices={invoices} expenses={expenses} />
 
       <div className="panel tax-reminder">
         <h2 style={{ marginTop: 0 }}>🧾 {t.home.taxTitle}</h2>

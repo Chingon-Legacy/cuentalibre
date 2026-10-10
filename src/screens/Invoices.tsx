@@ -3,6 +3,7 @@ import { useBiz } from "../App";
 import { addInvoice, calcTaxAmount, deleteInvoice, invoiceTotal, setInvoiceStatus, updateInvoice } from "../db";
 import { getStateInfo } from "../data/us-states";
 import { fmtDate, fmtMoney, todayISO, useLang, useStrings } from "../i18n";
+import { daysBetween, normStr } from "../dupes";
 import EmptyState from "../components/EmptyState";
 import ServicePicker from "../components/ServicePicker";
 import PayMethodSelect from "../components/PayMethodSelect";
@@ -156,6 +157,8 @@ export default function Invoices({ invoices, services, refresh }: Props) {
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("all");
   const today = todayISO();
+  // Non-blocking duplicate warning: the matching existing invoice, if any.
+  const [dupeWarn, setDupeWarn] = useState<Invoice | null>(null);
 
   /** State base rate as a percent string, e.g. "7" for 7%. */
   const stateRatePct = useMemo(() => {
@@ -186,6 +189,7 @@ export default function Invoices({ invoices, services, refresh }: Props) {
     setPayMethod(null);
     setEditing(null);
     setShowForm(false);
+    setDupeWarn(null);
   };
 
   const startCreate = () => {
@@ -200,6 +204,7 @@ export default function Invoices({ invoices, services, refresh }: Props) {
     setPayMethod(null);
     setEditing(null);
     setShowForm(true);
+    setDupeWarn(null);
   };
 
   const startEdit = (inv: Invoice) => {
@@ -215,9 +220,35 @@ export default function Invoices({ invoices, services, refresh }: Props) {
     setPayMethod(inv.pay_method ?? null);
     setEditing(inv);
     setShowForm(true);
+    setDupeWarn(null);
   };
 
-  const submit = async () => {
+  /** Finds an existing invoice that looks like a duplicate of the form:
+   *  same amount, same normalized customer, due date within the last 7 days
+   *  (including the entered date). Excludes the record being edited. */
+  const findInvoiceDupe = (): Invoice | null => {
+    const value = parseFloat(amount);
+    if (Number.isNaN(value)) return null;
+    const cents = Math.round(value * 100);
+    const name = normStr(customer);
+    if (!name) return null;
+    const entered = dueDate;
+    return (
+      invoices.find((inv) => {
+        if (editing && inv.id === editing.id) return false;
+        const d = daysBetween(inv.due_date, entered);
+        return (
+          Math.round(inv.amount * 100) === cents &&
+          normStr(inv.customer) === name &&
+          d >= 0 &&
+          d <= 7
+        );
+      }) ?? null
+    );
+  };
+
+  /** Persists the form. Only called after validation and the duplicate check. */
+  const doSubmit = async () => {
     const value = parseFloat(amount);
     if (!customer.trim() || Number.isNaN(value) || value <= 0) return;
     const rounded = Math.round(value * 100) / 100;
@@ -244,6 +275,21 @@ export default function Invoices({ invoices, services, refresh }: Props) {
     }
     reset();
     await refresh();
+  };
+
+  /** Validates the form, then shows a friendly non-blocking duplicate warning
+   *  before saving (never prevents the save — "Save anyway" always works). */
+  const submit = async () => {
+    const value = parseFloat(amount);
+    if (!customer.trim() || Number.isNaN(value) || value <= 0) return;
+    if (!dupeWarn) {
+      const dup = findInvoiceDupe();
+      if (dup) {
+        setDupeWarn(dup);
+        return;
+      }
+    }
+    await doSubmit();
   };
 
   const markPaid = async (id: number) => {
@@ -397,6 +443,44 @@ export default function Invoices({ invoices, services, refresh }: Props) {
             )}
             <PayMethodSelect value={payMethod} onChange={setPayMethod} />
           </div>
+          {dupeWarn && (
+            <div
+              role="alert"
+              style={{
+                background: "var(--amber-light)",
+                border: "1px solid var(--amber)",
+                borderRadius: 9,
+                padding: "12px 14px",
+                margin: "4px 0 12px",
+              }}
+            >
+              <p
+                style={{
+                  margin: "0 0 10px",
+                  fontWeight: 600,
+                  color: "var(--amber)",
+                }}
+              >
+                ⚠️{" "}
+                {t.dupes.warnInvoice
+                  .replace("{money}", fmtMoney(parseFloat(amount) || 0, lang))
+                  .replace("{customer}", customer.trim())
+                  .replace("{date}", fmtDate(dupeWarn.due_date, lang))}
+              </p>
+              <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+                <button type="button" className="btn" onClick={doSubmit}>
+                  {t.dupes.saveAnyway}
+                </button>
+                <button
+                  type="button"
+                  className="btn secondary"
+                  onClick={() => setDupeWarn(null)}
+                >
+                  {t.dupes.keepEditing}
+                </button>
+              </div>
+            </div>
+          )}
           <div className="form-actions">
             <button type="button" className="btn secondary" onClick={reset}>
               {t.invoices.cancel}

@@ -21,6 +21,7 @@ const en = {
     mileage: "Mileage",
     customers: "Customers",
     contractors: "Contractors",
+    loans: "Loans",
     reports: "Reports",
     settings: "Settings",
   },
@@ -63,6 +64,11 @@ const en = {
     billsDue: "Bills due soon",
     noBillsDue: "No bills due. Nice!",
     totalOwed: "You owe",
+    backupNudgeTitle: "Save your work 💾",
+    backupNudge:
+      "It's been a while since you saved your work — tap here to save it.",
+    saveNow: "Save now",
+    dismiss: "Later",
   },
 
   invoices: {
@@ -351,6 +357,12 @@ const en = {
     remindersDesc: "Get a gentle nudge when an invoice or bill is almost due.",
     on: "On",
     off: "Off",
+    taxJarTitle: "Tax savings jar",
+    taxJarPercent: "Percent of income to set aside",
+    taxJarDesc:
+      "Many self-employed people set aside 25–30% of income for taxes.",
+    lastBackup: "Last saved: {date}",
+    neverBackedUp: "You haven't saved a backup yet.",
   },
 
   common: {
@@ -576,6 +588,77 @@ const en = {
     setPrompt: "Set a monthly income goal in Settings to track your progress here.",
     monthFmt: "MMMM",
   },
+
+  taxjar: {
+    title: "Tax savings jar",
+    setAside: "Set aside {money} for taxes",
+    basedOn: "Based on {money} earned this month at {pct}%",
+    note: "A friendly reminder — not a tax rule. Check with your preparer.",
+    noIncome: "No income yet this month — nothing to set aside.",
+  },
+
+  yoy: {
+    title: "This year vs last year",
+    incomeUp: "You've made {pct}% more than last year 🎉",
+    incomeDown: "You've made {pct}% less than last year",
+    incomeSame: "Income is about the same as last year",
+    expensesUp: "Expenses are up {pct}% vs last year",
+    expensesDown: "Expenses are down {pct}% vs last year",
+    expensesSame: "Expenses are about the same as last year",
+    ytdNote: "Year to date, through {date}",
+  },
+
+  statement: {
+    button: "Statement",
+    title: "Customer statement",
+    from: "From",
+    to: "To",
+    invoice: "Invoice",
+    date: "Date",
+    amount: "Amount",
+    status: "Status",
+    totalOwed: "Total still owed",
+    print: "Print / Save as PDF",
+    noInvoices: "No invoices in this period.",
+    billedTo: "Billed to",
+  },
+
+  dupes: {
+    possibleBadge: "Possible duplicate",
+    reviewTitle: "Review possible duplicates",
+    reviewSub:
+      "These rows look like ones you already have. Unchecked rows won't be imported.",
+    warnExpense:
+      "Heads up — you already have a {money} expense for “{desc}” from {date}. Save anyway?",
+    warnInvoice:
+      "Heads up — you already have a {money} invoice for {customer} from {date}. Save anyway?",
+    saveAnyway: "Save anyway",
+    keepEditing: "Keep editing",
+  },
+
+  loans: {
+    title: "Loans",
+    new: "Add loan",
+    name: "Loan name",
+    namePh: "e.g. Truck loan",
+    borrowed: "Amount borrowed",
+    dateBorrowed: "Date borrowed",
+    note: "Note (optional)",
+    balance: "Still owed",
+    paidSoFar: "Paid so far",
+    logPayment: "Log payment",
+    paymentAmount: "Payment amount",
+    paymentDate: "Payment date",
+    delete: "Delete",
+    confirmDelete: "Delete this loan and all its payments?",
+    emptyTitle: "No loans yet",
+    emptyBody:
+      "Track money you borrowed here — log payments and watch the balance shrink.",
+    paidOff: "Paid off! 🎉",
+    create: "Add loan",
+    cancel: "Cancel",
+    progress: "{pct}% paid",
+  },
 };
 
 const es: typeof en = {
@@ -592,6 +675,7 @@ const es: typeof en = {
     mileage: "Millaje",
     customers: "Clientes",
     contractors: "Contratistas",
+    loans: "Préstamos",
     reports: "Reportes",
     settings: "Ajustes",
   },
@@ -634,6 +718,11 @@ const es: typeof en = {
     billsDue: "Cuentas por vencer",
     noBillsDue: "Sin cuentas por vencer. ¡Qué bien!",
     totalOwed: "Debes",
+    backupNudgeTitle: "Guarda tu trabajo 💾",
+    backupNudge:
+      "Hace tiempo que no guardas tu trabajo — toca aquí para guardarlo.",
+    saveNow: "Guardar ahora",
+    dismiss: "Después",
   },
 
   invoices: {
@@ -922,6 +1011,12 @@ const es: typeof en = {
     remindersDesc: "Recibe un aviso amable cuando una factura o cuenta esté por vencer.",
     on: "Activado",
     off: "Desactivado",
+    taxJarTitle: "Alcancía de impuestos",
+    taxJarPercent: "Porcentaje de ingresos a apartar",
+    taxJarDesc:
+      "Muchos trabajadores por cuenta propia apartan el 25–30% de sus ingresos para impuestos.",
+    lastBackup: "Último respaldo: {date}",
+    neverBackedUp: "Aún no has guardado un respaldo.",
   },
 
   common: {
@@ -1146,6 +1241,77 @@ const es: typeof en = {
     reached: "🎉 ¡Meta alcanzada! Increíble trabajo.",
     setPrompt: "Pon una meta mensual de ingresos en Ajustes para ver tu progreso aquí.",
     monthFmt: "MMMM",
+  },
+
+  taxjar: {
+    title: "Alcancía de impuestos",
+    setAside: "Aparta {money} para impuestos",
+    basedOn: "Basado en {money} ganados este mes al {pct}%",
+    note: "Un recordatorio amable — no una regla fiscal. Consúltalo con tu preparador.",
+    noIncome: "Aún no hay ingresos este mes — nada que apartar.",
+  },
+
+  yoy: {
+    title: "Este año vs el año pasado",
+    incomeUp: "Has ganado {pct}% más que el año pasado 🎉",
+    incomeDown: "Has ganado {pct}% menos que el año pasado",
+    incomeSame: "Los ingresos están parecidos al año pasado",
+    expensesUp: "Los gastos subieron {pct}% vs el año pasado",
+    expensesDown: "Los gastos bajaron {pct}% vs el año pasado",
+    expensesSame: "Los gastos están parecidos al año pasado",
+    ytdNote: "En lo que va del año, hasta {date}",
+  },
+
+  statement: {
+    button: "Estado de cuenta",
+    title: "Estado de cuenta del cliente",
+    from: "Desde",
+    to: "Hasta",
+    invoice: "Factura",
+    date: "Fecha",
+    amount: "Monto",
+    status: "Estado",
+    totalOwed: "Total aún adeudado",
+    print: "Imprimir / Guardar como PDF",
+    noInvoices: "No hay facturas en este período.",
+    billedTo: "Facturado a",
+  },
+
+  dupes: {
+    possibleBadge: "Posible duplicado",
+    reviewTitle: "Revisa posibles duplicados",
+    reviewSub:
+      "Estas filas se parecen a las que ya tienes. Las filas sin marcar no se importarán.",
+    warnExpense:
+      "Ojo — ya tienes un gasto de {money} por “{desc}” del {date}. ¿Guardar de todos modos?",
+    warnInvoice:
+      "Ojo — ya tienes una factura de {money} para {customer} del {date}. ¿Guardar de todos modos?",
+    saveAnyway: "Guardar de todos modos",
+    keepEditing: "Seguir editando",
+  },
+
+  loans: {
+    title: "Préstamos",
+    new: "Agregar préstamo",
+    name: "Nombre del préstamo",
+    namePh: "p. ej. Préstamo de la camioneta",
+    borrowed: "Monto prestado",
+    dateBorrowed: "Fecha del préstamo",
+    note: "Nota (opcional)",
+    balance: "Aún debes",
+    paidSoFar: "Pagado hasta ahora",
+    logPayment: "Registrar pago",
+    paymentAmount: "Monto del pago",
+    paymentDate: "Fecha del pago",
+    delete: "Borrar",
+    confirmDelete: "¿Borrar este préstamo y todos sus pagos?",
+    emptyTitle: "Aún no hay préstamos",
+    emptyBody:
+      "Lleva aquí el dinero que pediste prestado — registra pagos y mira cómo baja el saldo.",
+    paidOff: "¡Pagado! 🎉",
+    create: "Agregar préstamo",
+    cancel: "Cancelar",
+    progress: "{pct}% pagado",
   },
 };
 

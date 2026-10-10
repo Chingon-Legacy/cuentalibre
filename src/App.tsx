@@ -15,6 +15,8 @@ import {
   getBusinesses,
   getContractorPayments,
   getContractors,
+  getLoans,
+  getLoanPayments,
   getExpenses,
   getInvoices,
   getQuotes,
@@ -39,6 +41,8 @@ import type {
   Expense,
   Invoice,
   Lang,
+  Loan,
+  LoanPayment,
   Quote,
   Screen,
   Service,
@@ -60,6 +64,7 @@ import Time from "./screens/Time";
 import Mileage from "./screens/Mileage";
 import Customers from "./screens/Customers";
 import Contractors from "./screens/Contractors";
+import Loans from "./screens/Loans";
 import Reports from "./screens/Reports";
 import Settings from "./screens/Settings";
 
@@ -141,6 +146,7 @@ const NAV_ITEMS: { id: Screen; icon: string; label: (t: Strings) => string }[] =
   { id: "mileage", icon: "🚗", label: (t) => t.nav.mileage },
   { id: "customers", icon: "👥", label: (t) => t.nav.customers },
   { id: "contractors", icon: "🤝", label: (t) => t.nav.contractors },
+  { id: "loans", icon: "🏦", label: (t) => t.nav.loans },
   { id: "reports", icon: "📊", label: (t) => t.nav.reports },
   { id: "settings", icon: "⚙️", label: (t) => t.nav.settings },
 ];
@@ -215,6 +221,8 @@ interface AppData {
   quotes: Quote[];
   contractors: Contractor[];
   contractorPayments: ContractorPayment[];
+  loans: Loan[];
+  loanPayments: LoanPayment[];
   services: Service[];
   timeEntries: TimeEntry[];
   trips: Trip[];
@@ -227,6 +235,8 @@ const EMPTY_DATA: AppData = {
   quotes: [],
   contractors: [],
   contractorPayments: [],
+  loans: [],
+  loanPayments: [],
   services: [],
   timeEntries: [],
   trips: [],
@@ -362,6 +372,9 @@ function Shell({
             refresh={refresh}
           />
         )}
+        {ready && screen === "loans" && (
+          <Loans loans={data.loans} payments={data.loanPayments} refresh={refresh} />
+        )}
         {ready && screen === "reports" && (
           <Reports
             invoices={data.invoices}
@@ -433,7 +446,7 @@ export default function App() {
 
   /** Reloads every money list for the active business. */
   const refreshData = useCallback(async (): Promise<AppData> => {
-    const [invoices, expenses, bills, quotes, contractors, contractorPayments, services, timeEntries, trips] =
+    const [invoices, expenses, bills, quotes, contractors, contractorPayments, services, timeEntries, trips, loans, loanPayments] =
       await Promise.all([
         getInvoices(),
         getExpenses(),
@@ -444,8 +457,10 @@ export default function App() {
         getServices(),
         getTimeEntries(),
         getTrips(),
+        getLoans(),
+        getLoanPayments(),
       ]);
-    const next = { invoices, expenses, bills, quotes, contractors, contractorPayments, services, timeEntries, trips };
+    const next = { invoices, expenses, bills, quotes, contractors, contractorPayments, services, timeEntries, trips, loans, loanPayments };
     setData(next);
     return next;
   }, []);

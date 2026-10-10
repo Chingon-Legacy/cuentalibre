@@ -1,4 +1,5 @@
 import { useMemo, useState } from "react";
+import { useBiz } from "../App";
 import { fmtDate, fmtMoney, todayISO, useLang, useStrings } from "../i18n";
 import EmptyState from "../components/EmptyState";
 import { invoiceTotal } from "../db";
@@ -16,10 +17,141 @@ interface CustomerRow {
   invoices: Invoice[];
 }
 
+function StatementModal({
+  row,
+  onClose,
+}: {
+  row: CustomerRow;
+  onClose: () => void;
+}) {
+  const t = useStrings();
+  const lang = useLang();
+  const { bizName } = useBiz();
+  const today = todayISO();
+  const [from, setFrom] = useState(() => `${today.slice(0, 4)}-01-01`);
+  const [to, setTo] = useState(today);
+
+  const list = useMemo(
+    () =>
+      row.invoices
+        .filter((inv) => inv.due_date >= from && inv.due_date <= to)
+        .sort((a, b) => a.due_date.localeCompare(b.due_date)),
+    [row, from, to]
+  );
+
+  const totalOwed = useMemo(
+    () =>
+      list
+        .filter((inv) => inv.status !== "paid")
+        .reduce((sum, inv) => sum + invoiceTotal(inv), 0),
+    [list]
+  );
+
+  const badge = (inv: Invoice) => {
+    const late = inv.status === "waiting" && inv.due_date < today;
+    return (
+      <span
+        className={`badge ${inv.status === "paid" ? "paid" : late ? "late" : "waiting"}`}
+      >
+        {inv.status === "paid"
+          ? t.invoices.paid
+          : late
+            ? t.invoices.late
+            : t.invoices.waiting}
+      </span>
+    );
+  };
+
+  return (
+    <div className="modal-overlay" onClick={onClose}>
+      <div className="modal print-sheet" onClick={(e) => e.stopPropagation()}>
+        <div className="invoice-paper">
+          <div className="invoice-head">
+            <div>
+              <div className="invoice-biz">{bizName || "CuentaLibre"}</div>
+              <div className="invoice-sub">{t.statement.title}</div>
+            </div>
+            <div className="invoice-num">
+              <div className="label">{t.statement.billedTo}</div>
+              <div className="value">{row.name}</div>
+            </div>
+          </div>
+
+          <div className="report-controls no-print">
+            <div className="field">
+              <label>{t.statement.from}</label>
+              <input
+                type="date"
+                value={from}
+                max={to}
+                onChange={(e) => setFrom(e.target.value)}
+              />
+            </div>
+            <div className="field">
+              <label>{t.statement.to}</label>
+              <input
+                type="date"
+                value={to}
+                min={from}
+                max={today}
+                onChange={(e) => setTo(e.target.value)}
+              />
+            </div>
+          </div>
+
+          <div className="row-sub" style={{ marginBottom: 12 }}>
+            {fmtDate(from, lang)} – {fmtDate(to, lang)}
+          </div>
+
+          {list.length === 0 ? (
+            <p>{t.statement.noInvoices}</p>
+          ) : (
+            <table className="report invoice-table">
+              <thead>
+                <tr>
+                  <th>{t.statement.invoice}</th>
+                  <th>{t.statement.date}</th>
+                  <th className="num">{t.statement.amount}</th>
+                  <th>{t.statement.status}</th>
+                </tr>
+              </thead>
+              <tbody>
+                {list.map((inv) => (
+                  <tr key={inv.id}>
+                    <td>#{inv.number || "—"}</td>
+                    <td>{fmtDate(inv.due_date, lang)}</td>
+                    <td className="num">{fmtMoney(invoiceTotal(inv), lang)}</td>
+                    <td>{badge(inv)}</td>
+                  </tr>
+                ))}
+                <tr className="total">
+                  <td colSpan={2}>{t.statement.totalOwed}</td>
+                  <td className="num">{fmtMoney(totalOwed, lang)}</td>
+                  <td />
+                </tr>
+              </tbody>
+            </table>
+          )}
+
+          <div className="form-actions no-print">
+            <button type="button" className="btn secondary" onClick={onClose}>
+              {t.invoices.cancel}
+            </button>
+            <button type="button" className="btn" onClick={() => window.print()}>
+              🖨 {t.statement.print}
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export default function Customers({ invoices }: Props) {
   const t = useStrings();
   const lang = useLang();
   const [expanded, setExpanded] = useState<string | null>(null);
+  const [statementFor, setStatementFor] = useState<CustomerRow | null>(null);
   const today = todayISO();
 
   const rows: CustomerRow[] = useMemo(() => {
@@ -76,6 +208,13 @@ export default function Customers({ invoices }: Props) {
                   <button
                     type="button"
                     className="btn small secondary"
+                    onClick={() => setStatementFor(r)}
+                  >
+                    🧾 {t.statement.button}
+                  </button>
+                  <button
+                    type="button"
+                    className="btn small secondary"
                     onClick={() => toggle(r.name)}
                   >
                     {expanded === r.name
@@ -123,6 +262,10 @@ export default function Customers({ invoices }: Props) {
           </ul>
         )}
       </div>
+
+      {statementFor && (
+        <StatementModal row={statementFor} onClose={() => setStatementFor(null)} />
+      )}
     </div>
   );
 }
