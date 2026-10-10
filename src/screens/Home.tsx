@@ -192,8 +192,9 @@ function Insights({
     const late = invoices.filter((i) => i.status === "waiting" && i.due_date < today);
     if (late.length > 0) {
       const total = late.reduce((s, i) => s + invoiceTotal(i), 0);
+      const template = late.length === 1 ? t.insights.lateOne : t.insights.late;
       out.push(
-        t.insights.late
+        template
           .replace("{n}", String(late.length))
           .replace("{money}", fmtMoney(total, lang))
       );
@@ -572,9 +573,12 @@ export default function Home({ invoices, expenses, bills, donations, go }: Props
   const { isNonprofit } = useBiz();
   const today = todayISO();
 
-  const moneyIn = invoices
-    .filter((i) => i.status === "paid")
-    .reduce((s, i) => s + invoiceTotal(i), 0);
+  const moneyIn =
+    invoices
+      .filter((i) => i.status === "paid")
+      .reduce((s, i) => s + invoiceTotal(i), 0) +
+    // Nonprofits receive money as donations, not just paid invoices.
+    (isNonprofit ? donations.reduce((s, d) => s + d.amount, 0) : 0);
   const moneyOut = expenses.reduce((s, e) => s + e.amount, 0);
   const left = moneyIn - moneyOut;
 

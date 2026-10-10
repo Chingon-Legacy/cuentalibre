@@ -320,6 +320,7 @@ const en = {
 
   reports: {
     title: "Reports",
+    subtitle: "Simple summaries of your money.",
     type: "Report",
     from: "From",
     to: "To",
@@ -419,6 +420,7 @@ const en = {
   insights: {
     title: "💡 Worth a look",
     late: "⏰ {n} late invoices — that's {money} waiting for you",
+    lateOne: "⏰ 1 late invoice — that's {money} waiting for you",
     billsSoon: "📄 {money} in bills due in the next 7 days",
     catUp: "📈 {category} cost {pct}% more than last month",
     topCat: "💸 Most of your spending this month went to {category} ({money})",
@@ -1164,6 +1166,7 @@ const es: typeof en = {
 
   reports: {
     title: "Reportes",
+    subtitle: "Resúmenes simples de tu dinero.",
     type: "Reporte",
     from: "Desde",
     to: "Hasta",
@@ -1263,6 +1266,7 @@ const es: typeof en = {
   insights: {
     title: "💡 Vale la pena mirar",
     late: "⏰ {n} facturas atrasadas — esos son {money} esperándote",
+    lateOne: "⏰ 1 factura atrasada — esos son {money} esperándote",
     billsSoon: "📄 {money} en cuentas que vencen en los próximos 7 días",
     catUp: "📈 {category} costó {pct}% más que el mes pasado",
     topCat: "💸 La mayor parte de tu gasto este mes fue en {category} ({money})",

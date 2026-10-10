@@ -700,7 +700,7 @@ export default function Reports({ invoices, expenses, contractors, contractorPay
   return (
     <div className="page">
       <h1>📊 {t.reports.title}</h1>
-      <p className="subtitle">{t.reports.type}</p>
+      <p className="subtitle">{t.reports.subtitle}</p>
       <HintBar id="reports" text={t.hints.reports} />
 
       {isNonprofit && (

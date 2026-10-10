@@ -347,11 +347,19 @@ export async function initDb(): Promise<void> {
 
   // One-time migration: legacy single-business installs get their data
   // folded into a real business row built from the old global settings.
+  // Fresh installs skip this entirely — onboarding creates their business.
   const bizCount = await db.select<{ c: number }[]>("SELECT COUNT(*) AS c FROM businesses");
   if (bizCount[0].c === 0) {
     const name = (await getSetting("businessName")) || "";
     const type = (await getSetting("businessType")) || "freelancer";
     const state = (await getSetting("businessState")) || "";
+    let legacyRows = 0;
+    for (const t of MONEY_TABLES) {
+      const r = await db.select<{ c: number }[]>(`SELECT COUNT(*) AS c FROM ${t}`);
+      legacyRows += r[0].c;
+      if (legacyRows > 0) break;
+    }
+    if (name || type !== "freelancer" || state || legacyRows > 0) {
     const res = await db.execute(
       "INSERT INTO businesses (name, type, state, created_at) VALUES ($1, $2, $3, $4)",
       [name || "Business 1", type, state, new Date().toISOString()]
@@ -375,6 +383,7 @@ export async function initDb(): Promise<void> {
     await db.execute(
       "DELETE FROM settings WHERE key IN ('businessName','businessType','businessState','invoiceSeq','quoteSeq')"
     );
+    }
   }
 
   // Give older invoices their sequential numbers.
@@ -693,7 +702,7 @@ export async function addBill(input: {
 }): Promise<void> {
   const db = await getDb();
   await db.execute(
-    "INSERT INTO bills (business_id, payee, amount, category, due_date, status, pay_method, created_at) VALUES ($1, $2, $3, $4, 'unpaid', $5, $6)",
+    "INSERT INTO bills (business_id, payee, amount, category, due_date, status, pay_method, created_at) VALUES ($1, $2, $3, $4, $5, 'unpaid', $6, $7)",
     [activeBusinessId, input.payee, input.amount, input.category, input.due_date, input.pay_method ?? null, new Date().toISOString()]
   );
 }
