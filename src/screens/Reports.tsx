@@ -1,6 +1,7 @@
 import { useMemo, useState } from "react";
 import { useBiz } from "../App";
 import { downloadCsv, toCsv } from "../backup";
+import { invoiceTotal } from "../db";
 import { fmtDate, fmtMoney, todayISO, useLang, useStrings } from "../i18n";
 import type { Expense, Invoice } from "../types";
 
@@ -58,8 +59,9 @@ export default function Reports({ invoices, expenses }: Props) {
     return c ? (lang === "es" ? c.es : c.en) : t.expenses.other;
   };
 
-  const moneyIn = paidInRange.reduce((s, i) => s + i.amount, 0);
+  const moneyIn = paidInRange.reduce((s, i) => s + invoiceTotal(i), 0);
   const moneyOut = expInRange.reduce((s, e) => s + e.amount, 0);
+  const taxCollected = paidInRange.reduce((s, i) => s + i.tax_amount, 0);
   const incomeByCat = useMemo(() => groupByCategory(paidInRange), [paidInRange]);
   const expensesByCat = useMemo(() => groupByCategory(expInRange), [expInRange]);
 
@@ -81,7 +83,7 @@ export default function Reports({ invoices, expenses }: Props) {
         .filter(
           (i) => i.status === "paid" && i.due_date.startsWith(key) && inRange(i.due_date)
         )
-        .reduce((s, i) => s + i.amount, 0);
+        .reduce((s, i) => s + invoiceTotal(i), 0);
       const outAmt = expenses
         .filter((e) => e.date.startsWith(key) && inRange(e.date))
         .reduce((s, e) => s + e.amount, 0);
@@ -139,6 +141,7 @@ export default function Reports({ invoices, expenses }: Props) {
         ...incomeByCat.map(([c, a]): (string | number)[] => [catLabel(c), money(a)]),
         [t.reports.moneyOut, money(moneyOut)],
         ...expensesByCat.map(([c, a]): (string | number)[] => [catLabel(c), money(a)]),
+        [t.reports.taxCollected, money(taxCollected)],
         [t.reports.left, money(moneyIn - moneyOut)],
       ];
     } else if (report === "taxguide") {
@@ -149,8 +152,12 @@ export default function Reports({ invoices, expenses }: Props) {
         [t.reports.taxExpenses, money(moneyOut)],
         ...expensesByCat.map(([c, a]): (string | number)[] => [catLabel(c), money(a)]),
         [t.reports.taxExpensesWhy, ""],
+        [t.reports.taxCollected, money(taxCollected)],
         [t.reports.taxProfit, money(moneyIn - moneyOut)],
         [t.reports.taxProfitWhy, ""],
+        [t.reports.keepRecordsTitle, ""],
+        [t.reports.keepRecordsWhy, ""],
+        [t.reports.disclaimer, ""],
       ];
     } else {
       headers = [t.reports.month, t.reports.moneyIn, t.reports.moneyOut, t.reports.left];
@@ -317,6 +324,10 @@ export default function Reports({ invoices, expenses }: Props) {
                     <td className="num">{fmtMoney(a, lang)}</td>
                   </tr>
                 ))}
+                <tr>
+                  <td>{t.reports.taxCollected}</td>
+                  <td className="num">{fmtMoney(taxCollected, lang)}</td>
+                </tr>
                 <tr className="total">
                   <td>{t.reports.left}</td>
                   <td className="num">{fmtMoney(moneyIn - moneyOut, lang)}</td>
@@ -366,6 +377,13 @@ export default function Reports({ invoices, expenses }: Props) {
               </div>
               <p className="tax-why">{t.reports.taxProfitWhy}</p>
             </div>
+            <div className="tax-block">
+              <div className="tax-line">
+                <span className="tax-name">🗂️ {t.reports.keepRecordsTitle}</span>
+              </div>
+              <p className="tax-why">{t.reports.keepRecordsWhy}</p>
+            </div>
+            <p className="disclaimer">{t.reports.disclaimer}</p>
           </>
         ) : (
           <table className="report">

@@ -28,6 +28,10 @@ const en = {
     bizTitle: "What kind of business do you have?",
     bizSub:
       "We'll set up the right money categories for you. You can change this later in Settings.",
+    stateTitle: "What state is your business in?",
+    stateSub:
+      "We'll use your state's base sales tax rate on your invoices. You can change it later in Settings.",
+    statePh: "Choose your state…",
     back: "Back",
     next: "Continue",
     start: "Start using CuentaLibre",
@@ -46,6 +50,10 @@ const en = {
     newInvoice: "New invoice",
     addExpense: "Add expense",
     cashflowTitle: "Cash flow — last 6 months",
+    taxTitle: "Tax reminder",
+    taxNext: "Next estimated tax payment",
+    taxSub:
+      "Federal quarterly due date. Your state may have its own — check with your preparer.",
   },
 
   invoices: {
@@ -84,6 +92,12 @@ const en = {
     billTo: "Bill to",
     from: "From",
     amountDue: "Amount due",
+    taxAdd: "Add sales tax",
+    taxRate: "Tax rate (%)",
+    taxNote:
+      "State base rate only — your city or county may add more. Verify your local rate.",
+    salesTax: "Sales tax",
+    subtotal: "Subtotal",
   },
 
   expenses: {
@@ -154,6 +168,12 @@ const en = {
     taxProfit: "Net profit",
     taxProfitWhy:
       "Income minus expenses. Your taxes are roughly based on this number.",
+    taxCollected: "Sales tax collected",
+    keepRecordsTitle: "Keep your records 7 years",
+    keepRecordsWhy:
+      "The IRS and most states can ask about old tax years. Keep invoices, receipts, and reports for at least 7 years — this app's backup file counts.",
+    disclaimer:
+      "CuentaLibre is not a tax professional. Tax rates change — verify your state and local rates with a tax preparer.",
   },
 
   settings: {
@@ -161,6 +181,7 @@ const en = {
     language: "Language",
     businessType: "Business type",
     businessName: "Business name",
+    businessState: "Business state",
     backupTitle: "Your data",
     saveWork: "Save work",
     saveWorkDesc: "Download a backup file to your computer.",
@@ -169,6 +190,8 @@ const en = {
     about: "About",
     aboutText:
       "CuentaLibre is free, open-source accounting software for small business owners. Your data stays on your computer — never on someone else's server.",
+    disclaimer:
+      "CuentaLibre is not a tax professional. Tax rates change — verify your state and local rates with a tax preparer.",
     version: "Version",
     saved: "Work saved to your computer.",
     restored: "Backup restored.",
@@ -205,6 +228,10 @@ const es: typeof en = {
     bizTitle: "¿Qué tipo de negocio tienes?",
     bizSub:
       "Prepararemos las categorías adecuadas para ti. Puedes cambiarlo después en Ajustes.",
+    stateTitle: "¿En qué estado está tu negocio?",
+    stateSub:
+      "Usaremos la tasa base de impuesto sobre las ventas de tu estado en tus facturas. Puedes cambiarla después en Ajustes.",
+    statePh: "Elige tu estado…",
     back: "Atrás",
     next: "Continuar",
     start: "Empezar a usar CuentaLibre",
@@ -223,6 +250,10 @@ const es: typeof en = {
     newInvoice: "Nueva factura",
     addExpense: "Agregar gasto",
     cashflowTitle: "Flujo de dinero — últimos 6 meses",
+    taxTitle: "Recordatorio de impuestos",
+    taxNext: "Próximo pago estimado de impuestos",
+    taxSub:
+      "Fecha federal trimestral. Tu estado puede tener la suya — consúltalo con tu preparador.",
   },
 
   invoices: {
@@ -261,6 +292,12 @@ const es: typeof en = {
     billTo: "Facturar a",
     from: "De",
     amountDue: "Por pagar",
+    taxAdd: "Agregar impuesto sobre las ventas",
+    taxRate: "Tasa de impuesto (%)",
+    taxNote:
+      "Solo la tasa base del estado — tu ciudad o condado puede agregar más. Verifica tu tasa local.",
+    salesTax: "Impuesto sobre las ventas",
+    subtotal: "Subtotal",
   },
 
   expenses: {
@@ -331,6 +368,12 @@ const es: typeof en = {
     taxProfit: "Ganancia neta",
     taxProfitWhy:
       "Ingresos menos gastos. Tus impuestos se basan aproximadamente en este número.",
+    taxCollected: "Impuesto sobre las ventas cobrado",
+    keepRecordsTitle: "Guarda tus registros 7 años",
+    keepRecordsWhy:
+      "El IRS y la mayoría de los estados pueden revisar años anteriores. Guarda tus facturas, recibos y reportes por al menos 7 años — el archivo de respaldo de esta app cuenta.",
+    disclaimer:
+      "CuentaLibre no es un profesional de impuestos. Las tasas cambian — verifica tus tasas estatales y locales con un preparador.",
   },
 
   settings: {
@@ -338,6 +381,7 @@ const es: typeof en = {
     language: "Idioma",
     businessType: "Tipo de negocio",
     businessName: "Nombre del negocio",
+    businessState: "Estado del negocio",
     backupTitle: "Tus datos",
     saveWork: "Guardar respaldo",
     saveWorkDesc: "Descarga un archivo de respaldo a tu computadora.",
@@ -346,6 +390,8 @@ const es: typeof en = {
     about: "Acerca de",
     aboutText:
       "CuentaLibre es software de contabilidad gratuito y de código abierto para pequeños negocios. Tus datos se quedan en tu computadora — nunca en el servidor de otra persona.",
+    disclaimer:
+      "CuentaLibre no es un profesional de impuestos. Las tasas cambian — verifica tus tasas estatales y locales con un preparador.",
     version: "Versión",
     saved: "Respaldo guardado en tu computadora.",
     restored: "Respaldo restaurado.",

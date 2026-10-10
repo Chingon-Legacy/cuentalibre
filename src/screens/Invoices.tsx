@@ -1,6 +1,7 @@
 import { useMemo, useState } from "react";
 import { useBiz, useBizName } from "../App";
-import { addInvoice, deleteInvoice, setInvoiceStatus, updateInvoice } from "../db";
+import { addInvoice, calcTaxAmount, deleteInvoice, invoiceTotal, setInvoiceStatus, updateInvoice } from "../db";
+import { getStateInfo } from "../data/us-states";
 import { fmtDate, fmtMoney, todayISO, useLang, useStrings } from "../i18n";
 import type { Invoice, Recurrence } from "../types";
 
@@ -30,7 +31,12 @@ function InvoiceDetail({
   };
 
   const late = inv.status === "waiting" && inv.due_date < today;
-  const due = inv.status === "paid" ? 0 : inv.amount;
+  const total = invoiceTotal(inv);
+  const due = inv.status === "paid" ? 0 : total;
+  const ratePct =
+    inv.tax_rate > 0
+      ? `${(inv.tax_rate * 100).toFixed(2).replace(/\.?0+$/, "")}%`
+      : null;
 
   return (
     <div className="modal-overlay" onClick={onClose}>
@@ -84,6 +90,15 @@ function InvoiceDetail({
                 <td>{catLabel(inv.category)}</td>
                 <td className="num">{fmtMoney(inv.amount, lang)}</td>
               </tr>
+              {inv.tax_amount > 0 && (
+                <tr>
+                  <td>
+                    {t.invoices.salesTax}
+                    {ratePct ? ` (${ratePct})` : ""}
+                  </td>
+                  <td className="num">{fmtMoney(inv.tax_amount, lang)}</td>
+                </tr>
+              )}
               <tr className="total">
                 <td>{t.invoices.amountDue}</td>
                 <td className="num">{fmtMoney(due, lang)}</td>
@@ -108,7 +123,7 @@ function InvoiceDetail({
 export default function Invoices({ invoices, refresh }: Props) {
   const t = useStrings();
   const lang = useLang();
-  const { pack } = useBiz();
+  const { pack, stateCode } = useBiz();
   const [showForm, setShowForm] = useState(false);
   const [editing, setEditing] = useState<Invoice | null>(null);
   const [viewing, setViewing] = useState<Invoice | null>(null);
@@ -117,9 +132,29 @@ export default function Invoices({ invoices, refresh }: Props) {
   const [category, setCategory] = useState(pack.income[0]?.id ?? "other");
   const [dueDate, setDueDate] = useState(todayISO());
   const [recurrence, setRecurrence] = useState<Recurrence>("none");
+  const [taxOn, setTaxOn] = useState(false);
+  const [taxRatePct, setTaxRatePct] = useState("");
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("all");
   const today = todayISO();
+
+  /** State base rate as a percent string, e.g. "7" for 7%. */
+  const stateRatePct = useMemo(() => {
+    const info = getStateInfo(stateCode);
+    if (!info || info.salesTax <= 0) return "";
+    return (info.salesTax * 100).toFixed(2).replace(/\.?0+$/, "");
+  }, [stateCode]);
+
+  const parsedRate = useMemo(() => {
+    const p = parseFloat(taxRatePct);
+    return !Number.isNaN(p) && p > 0 ? p / 100 : 0;
+  }, [taxRatePct]);
+
+  const previewTax = useMemo(() => {
+    const value = parseFloat(amount);
+    if (!taxOn || Number.isNaN(value) || value <= 0) return 0;
+    return calcTaxAmount(value, parsedRate);
+  }, [amount, taxOn, parsedRate]);
 
   const reset = () => {
     setCustomer("");
@@ -127,6 +162,8 @@ export default function Invoices({ invoices, refresh }: Props) {
     setCategory(pack.income[0]?.id ?? "other");
     setDueDate(todayISO());
     setRecurrence("none");
+    setTaxOn(stateRatePct !== "");
+    setTaxRatePct(stateRatePct);
     setEditing(null);
     setShowForm(false);
   };
@@ -137,6 +174,9 @@ export default function Invoices({ invoices, refresh }: Props) {
     setCategory(pack.income[0]?.id ?? "other");
     setDueDate(todayISO());
     setRecurrence("none");
+    // Default to the business state's base rate; 0%-tax states get no tax line.
+    setTaxOn(stateRatePct !== "");
+    setTaxRatePct(stateRatePct);
     setEditing(null);
     setShowForm(true);
   };
@@ -147,6 +187,10 @@ export default function Invoices({ invoices, refresh }: Props) {
     setCategory(inv.category);
     setDueDate(inv.due_date);
     setRecurrence("none");
+    setTaxOn(inv.tax_rate > 0);
+    setTaxRatePct(
+      inv.tax_rate > 0 ? (inv.tax_rate * 100).toFixed(2).replace(/\.?0+$/, "") : ""
+    );
     setEditing(inv);
     setShowForm(true);
   };
@@ -155,12 +199,14 @@ export default function Invoices({ invoices, refresh }: Props) {
     const value = parseFloat(amount);
     if (!customer.trim() || Number.isNaN(value) || value <= 0) return;
     const rounded = Math.round(value * 100) / 100;
+    const rate = taxOn ? parsedRate : 0;
     if (editing) {
       await updateInvoice(editing.id, {
         customer: customer.trim(),
         amount: rounded,
         category,
         due_date: dueDate,
+        tax_rate: rate,
       });
     } else {
       await addInvoice({
@@ -169,6 +215,7 @@ export default function Invoices({ invoices, refresh }: Props) {
         category,
         due_date: dueDate,
         recurrence,
+        tax_rate: rate,
       });
     }
     reset();
@@ -262,6 +309,40 @@ export default function Invoices({ invoices, refresh }: Props) {
                 onChange={(e) => setDueDate(e.target.value)}
               />
             </div>
+            <div className="field">
+              <label className="check-row">
+                <input
+                  type="checkbox"
+                  checked={taxOn}
+                  onChange={(e) => {
+                    setTaxOn(e.target.checked);
+                    if (e.target.checked && !taxRatePct) setTaxRatePct(stateRatePct);
+                  }}
+                />
+                {t.invoices.taxAdd}
+              </label>
+              {taxOn && (
+                <>
+                  <div className="tax-rate-row">
+                    <input
+                      type="number"
+                      min="0"
+                      max="100"
+                      step="0.01"
+                      value={taxRatePct}
+                      onChange={(e) => setTaxRatePct(e.target.value)}
+                      placeholder={stateRatePct || "0"}
+                      aria-label={t.invoices.taxRate}
+                    />
+                    <span className="pct">%</span>
+                    <span className="tax-preview">
+                      {t.invoices.salesTax}: {fmtMoney(previewTax, lang)}
+                    </span>
+                  </div>
+                  <p className="tax-note">{t.invoices.taxNote}</p>
+                </>
+              )}
+            </div>
             {!editing && (
               <div className="field">
                 <label>{t.invoices.repeat}</label>
@@ -331,7 +412,9 @@ export default function Invoices({ invoices, refresh }: Props) {
                   </div>
                 </div>
                 {badge(inv)}
-                <span className="row-amount positive">{fmtMoney(inv.amount, lang)}</span>
+                <span className="row-amount positive">
+                  {fmtMoney(invoiceTotal(inv), lang)}
+                </span>
                 <button
                   type="button"
                   className="btn small secondary"

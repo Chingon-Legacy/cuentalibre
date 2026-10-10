@@ -904,6 +904,63 @@ table.report th.num {
   line-height: 1.5;
 }
 
+/* ---------- sales tax + disclaimers ---------- */
+
+.check-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.check-row input[type="checkbox"] {
+  width: 20px;
+  height: 20px;
+  accent-color: var(--blue);
+}
+
+.tax-rate-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 10px;
+}
+
+.tax-rate-row input[type="number"] {
+  width: 90px;
+}
+
+.tax-rate-row .pct {
+  font-weight: 700;
+  color: var(--ink-soft);
+}
+
+.tax-preview {
+  font-weight: 700;
+  color: var(--blue);
+}
+
+.tax-note {
+  font-size: 13px;
+  color: var(--ink-soft);
+  line-height: 1.5;
+  margin: 8px 0 0;
+}
+
+.disclaimer {
+  font-size: 13px;
+  color: var(--ink-soft);
+  line-height: 1.6;
+  border-left: 3px solid var(--blue);
+  padding-left: 12px;
+  margin: 20px 0 0;
+}
+
+.tax-reminder {
+  border-left: 4px solid var(--blue);
+}
+
 /* ---------- print: only the invoice paper ---------- */
 
 @media print {

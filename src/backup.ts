@@ -15,6 +15,7 @@ export async function saveWork(): Promise<boolean> {
     exportedAt: new Date().toISOString(),
     businessType: (await getSetting("businessType")) ?? "freelancer",
     businessName: (await getSetting("businessName")) ?? "",
+    businessState: (await getSetting("businessState")) ?? "",
     invoices: await getInvoices(),
     expenses: await getExpenses(),
   };

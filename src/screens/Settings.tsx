@@ -3,6 +3,7 @@ import { useBiz, useBizName, useLangState } from "../App";
 import { openBackup, saveWork } from "../backup";
 import { getSetting } from "../db";
 import { businessTypes } from "../data/categories";
+import { US_STATES } from "../data/us-states";
 import { useLang, useStrings } from "../i18n";
 import type { Lang } from "../types";
 
@@ -13,6 +14,7 @@ export default function Settings({ refresh }: { refresh: () => Promise<void> }) 
   const lang = useLang();
   const { lang: cur, setLang } = useLangState();
   const { biz, setBiz } = useBiz();
+  const { stateCode, setStateCode } = useBiz();
   const { bizName, setBizName } = useBizName();
   const [note, setNote] = useState<{ msg: string; error: boolean } | null>(null);
   const [working, setWorking] = useState(false);
@@ -42,6 +44,8 @@ export default function Settings({ refresh }: { refresh: () => Promise<void> }) 
         if (saved) setBiz(saved);
         const savedName = await getSetting("businessName");
         if (savedName) setBizName(savedName);
+        const savedState = await getSetting("businessState");
+        if (savedState) setStateCode(savedState);
         setNote({ msg: t.settings.restored, error: false });
       } else if (res === "invalid") {
         setNote({ msg: t.settings.restoreFailed, error: true });
@@ -95,6 +99,24 @@ export default function Settings({ refresh }: { refresh: () => Promise<void> }) 
 
         <div className="settings-row">
           <div>
+            <div className="label">{t.settings.businessState}</div>
+          </div>
+          <div className="field" style={{ minWidth: 220 }}>
+            <select value={stateCode} onChange={(e) => setStateCode(e.target.value)}>
+              <option value="" disabled>
+                {t.onboarding.statePh}
+              </option>
+              {US_STATES.map((s) => (
+                <option key={s.code} value={s.code}>
+                  {s.name}
+                </option>
+              ))}
+            </select>
+          </div>
+        </div>
+
+        <div className="settings-row">
+          <div>
             <div className="label">{t.settings.businessType}</div>
           </div>
           <div className="field" style={{ minWidth: 220 }}>
@@ -135,6 +157,7 @@ export default function Settings({ refresh }: { refresh: () => Promise<void> }) 
       <div className="panel">
         <h2>ℹ️ {t.settings.about}</h2>
         <p style={{ color: "var(--ink-soft)", lineHeight: 1.6 }}>{t.settings.aboutText}</p>
+        <p className="disclaimer">{t.settings.disclaimer}</p>
         <p style={{ color: "var(--ink-faint)", fontSize: 13 }}>
           {t.settings.version} {APP_VERSION} · MIT
         </p>

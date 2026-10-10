@@ -10,7 +10,9 @@ export interface Invoice {
   id: number;
   number: string; // sequential, e.g. "0001"
   customer: string;
-  amount: number;
+  amount: number; // subtotal before sales tax
+  tax_rate: number; // decimal fraction, e.g. 0.07 = 7%
+  tax_amount: number; // computed sales tax in dollars
   category: string;
   due_date: string; // YYYY-MM-DD
   status: InvoiceStatus;
@@ -34,6 +36,7 @@ export interface BackupData {
   exportedAt: string;
   businessType: string;
   businessName: string;
+  businessState: string;
   invoices: Invoice[];
   expenses: Expense[];
 }

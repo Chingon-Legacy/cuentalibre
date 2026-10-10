@@ -50,6 +50,17 @@ function addPeriod(iso: string, r: Recurrence): string {
   ).padStart(2, "0")}`;
 }
 
+/** Sales tax on a subtotal. rate is a decimal fraction (0.07 = 7%). */
+export function calcTaxAmount(subtotal: number, rate: number): number {
+  if (!rate || rate <= 0) return 0;
+  return Math.round(subtotal * rate * 100) / 100;
+}
+
+/** Full amount the customer pays: subtotal + sales tax. */
+export function invoiceTotal(inv: { amount: number; tax_amount: number }): number {
+  return Math.round((inv.amount + inv.tax_amount) * 100) / 100;
+}
+
 export async function initDb(): Promise<void> {
   const db = await getDb();
   await db.execute(`
@@ -58,6 +69,8 @@ export async function initDb(): Promise<void> {
       number TEXT NOT NULL DEFAULT '',
       customer TEXT NOT NULL,
       amount REAL NOT NULL,
+      tax_rate REAL NOT NULL DEFAULT 0,
+      tax_amount REAL NOT NULL DEFAULT 0,
       category TEXT NOT NULL DEFAULT 'other',
       due_date TEXT NOT NULL,
       status TEXT NOT NULL DEFAULT 'waiting',
@@ -88,6 +101,8 @@ export async function initDb(): Promise<void> {
     ["number", "TEXT NOT NULL DEFAULT ''"],
     ["recurrence", "TEXT NOT NULL DEFAULT 'none'"],
     ["recurring_from", "INTEGER"],
+    ["tax_rate", "REAL NOT NULL DEFAULT 0"],
+    ["tax_amount", "REAL NOT NULL DEFAULT 0"],
   ];
   for (const [col, def] of newCols) {
     if (!(await columnExists("invoices", col))) {
@@ -138,15 +153,20 @@ export async function addInvoice(input: {
   category: string;
   due_date: string;
   recurrence?: Recurrence;
+  tax_rate?: number;
 }): Promise<void> {
   const db = await getDb();
   const number = await nextInvoiceNumber();
+  const rate = input.tax_rate ?? 0;
+  const taxAmount = calcTaxAmount(input.amount, rate);
   await db.execute(
-    "INSERT INTO invoices (number, customer, amount, category, due_date, status, recurrence, recurring_from, created_at) VALUES ($1, $2, $3, $4, $5, 'waiting', $6, NULL, $7)",
+    "INSERT INTO invoices (number, customer, amount, tax_rate, tax_amount, category, due_date, status, recurrence, recurring_from, created_at) VALUES ($1, $2, $3, $4, $5, $6, $7, 'waiting', $8, NULL, $9)",
     [
       number,
       input.customer,
       input.amount,
+      rate,
+      taxAmount,
       input.category,
       input.due_date,
       input.recurrence ?? "none",
@@ -157,12 +177,13 @@ export async function addInvoice(input: {
 
 export async function updateInvoice(
   id: number,
-  input: { customer: string; amount: number; category: string; due_date: string }
+  input: { customer: string; amount: number; category: string; due_date: string; tax_rate: number }
 ): Promise<void> {
   const db = await getDb();
+  const taxAmount = calcTaxAmount(input.amount, input.tax_rate);
   await db.execute(
-    "UPDATE invoices SET customer = $1, amount = $2, category = $3, due_date = $4 WHERE id = $5",
-    [input.customer, input.amount, input.category, input.due_date, id]
+    "UPDATE invoices SET customer = $1, amount = $2, tax_rate = $3, tax_amount = $4, category = $5, due_date = $6 WHERE id = $7",
+    [input.customer, input.amount, input.tax_rate, taxAmount, input.category, input.due_date, id]
   );
 }
 
@@ -188,11 +209,13 @@ export async function generateRecurringInvoices(): Promise<void> {
       );
       if (existing.length === 0) {
         await db.execute(
-          "INSERT INTO invoices (number, customer, amount, category, due_date, status, recurrence, recurring_from, created_at) VALUES ($1,$2,$3,$4,$5,'waiting','none',$6,$7)",
+          "INSERT INTO invoices (number, customer, amount, tax_rate, tax_amount, category, due_date, status, recurrence, recurring_from, created_at) VALUES ($1,$2,$3,$4,$5,$6,$7,'waiting','none',$8,$9)",
           [
             await nextInvoiceNumber(),
             tpl.customer,
             tpl.amount,
+            tpl.tax_rate ?? 0,
+            calcTaxAmount(tpl.amount, tpl.tax_rate ?? 0),
             tpl.category,
             next,
             tpl.id,
@@ -265,11 +288,13 @@ export async function importBackup(data: BackupData): Promise<void> {
   await db.execute("DELETE FROM expenses");
   for (const inv of data.invoices) {
     await db.execute(
-      "INSERT INTO invoices (number, customer, amount, category, due_date, status, recurrence, recurring_from, created_at) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)",
+      "INSERT INTO invoices (number, customer, amount, tax_rate, tax_amount, category, due_date, status, recurrence, recurring_from, created_at) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)",
       [
         inv.number ?? "",
         inv.customer,
         inv.amount,
+        inv.tax_rate ?? 0,
+        inv.tax_amount ?? 0,
         inv.category ?? "other",
         inv.due_date,
         inv.status,
@@ -290,6 +315,9 @@ export async function importBackup(data: BackupData): Promise<void> {
   }
   if (typeof data.businessName === "string") {
     await setSetting("businessName", data.businessName);
+  }
+  if (typeof data.businessState === "string") {
+    await setSetting("businessState", data.businessState);
   }
   // Backups made before invoice numbers existed carry number = ''.
   const unnumbered = await db.select<{ id: number }[]>(

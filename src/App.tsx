@@ -39,12 +39,16 @@ export interface BizState {
   biz: string;
   setBiz: (id: string) => void;
   pack: CategoryPack;
+  stateCode: string;
+  setStateCode: (c: string) => void;
 }
 
 const BizContext = createContext<BizState>({
   biz: "freelancer",
   setBiz: () => undefined,
   pack: getPack("freelancer"),
+  stateCode: "",
+  setStateCode: () => undefined,
 });
 
 export function useBiz(): BizState {
@@ -96,6 +100,7 @@ function LangToggle() {
 function Shell({ setBiz }: { setBiz: (id: string) => void }) {
   const t = useStrings();
   const { bizName, setBizName } = useBizName();
+  const { setStateCode } = useBiz();
   const [screen, setScreen] = useState<Screen>("home");
   const [invoices, setInvoices] = useState<Invoice[]>([]);
   const [expenses, setExpenses] = useState<Expense[]>([]);
@@ -119,10 +124,15 @@ function Shell({ setBiz }: { setBiz: (id: string) => void }) {
       })
       .then((savedName) => {
         if (savedName) setBizName(savedName);
+        return getSetting("businessState");
+      })
+      .then((savedState) => {
+        // A restored backup may carry a business state — honor it.
+        if (savedState) setStateCode(savedState);
       })
       .catch(() => undefined)
       .finally(() => setReady(true));
-  }, [refresh, setBiz, setBizName]);
+  }, [refresh, setBiz, setBizName, setStateCode]);
 
   return (
     <>
@@ -194,6 +204,9 @@ export default function App() {
   const [bizName, setBizNameState] = useState<string>(
     () => localStorage.getItem("cl-bizname") ?? ""
   );
+  const [stateCode, setStateCodeState] = useState<string>(
+    () => localStorage.getItem("cl-bizstate") ?? ""
+  );
   const [onboarded, setOnboarded] = useState<boolean>(
     () => localStorage.getItem("cl-onboarded") === "1"
   );
@@ -216,23 +229,30 @@ export default function App() {
     setSetting("businessName", n).catch(() => undefined);
   }, []);
 
+  const setStateCode = useCallback((c: string) => {
+    setStateCodeState(c);
+    localStorage.setItem("cl-bizstate", c);
+    setSetting("businessState", c).catch(() => undefined);
+  }, []);
+
   const pack = useMemo(() => getPack(biz), [biz]);
 
   const finishOnboarding = useCallback(
-    (l: Lang, name: string, id: string) => {
+    (l: Lang, name: string, id: string, sc: string) => {
       setLang(l);
       setBizName(name);
       setBiz(id);
+      setStateCode(sc);
       localStorage.setItem("cl-onboarded", "1");
       setOnboarded(true);
     },
-    [setLang, setBizName, setBiz]
+    [setLang, setBizName, setBiz, setStateCode]
   );
 
   return (
     <LangStateContext.Provider value={{ lang, setLang }}>
       <LangProvider value={lang}>
-        <BizContext.Provider value={{ biz, setBiz, pack }}>
+        <BizContext.Provider value={{ biz, setBiz, pack, stateCode, setStateCode }}>
           <BizNameContext.Provider value={{ bizName, setBizName }}>
           {!onboarded ? (
             <Onboarding onDone={finishOnboarding} />

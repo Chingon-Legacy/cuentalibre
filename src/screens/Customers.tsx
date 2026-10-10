@@ -1,5 +1,6 @@
 import { useMemo, useState } from "react";
 import { fmtDate, fmtMoney, todayISO, useLang, useStrings } from "../i18n";
+import { invoiceTotal } from "../db";
 import type { Invoice } from "../types";
 
 interface Props {
@@ -29,9 +30,10 @@ export default function Customers({ invoices }: Props) {
         row = { name: key, billed: 0, paid: 0, owes: 0, invoices: [] };
         m.set(key, row);
       }
-      row.billed += inv.amount;
-      if (inv.status === "paid") row.paid += inv.amount;
-      else row.owes += inv.amount;
+      const total = invoiceTotal(inv);
+      row.billed += total;
+      if (inv.status === "paid") row.paid += total;
+      else row.owes += total;
       row.invoices.push(inv);
     }
     return [...m.values()].sort((a, b) => b.owes - a.owes || b.billed - a.billed);
@@ -104,7 +106,7 @@ export default function Customers({ invoices }: Props) {
                                   : t.invoices.waiting}
                             </span>
                             <span className="row-amount">
-                              {fmtMoney(inv.amount, lang)}
+                              {fmtMoney(invoiceTotal(inv), lang)}
                             </span>
                           </li>
                         );

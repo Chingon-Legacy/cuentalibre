@@ -1,5 +1,6 @@
 import { useMemo } from "react";
 import { fmtDate, fmtMoney, todayISO, useLang, useStrings } from "../i18n";
+import { invoiceTotal } from "../db";
 import type { Expense, Invoice, Screen } from "../types";
 
 interface Props {
@@ -33,7 +34,7 @@ function CashflowChart({
     for (const inv of invoices) {
       if (inv.status !== "paid") continue;
       const m = out.find((x) => inv.due_date.startsWith(x.key));
-      if (m) m.in += inv.amount;
+      if (m) m.in += invoiceTotal(inv);
     }
     for (const e of expenses) {
       const m = out.find((x) => e.date.startsWith(x.key));
@@ -130,6 +131,17 @@ function CashflowChart({
   );
 }
 
+/** Next federal quarterly estimated-tax due date (Jan 15 / Apr 15 / Jun 15 / Sep 15). */
+function nextQuarterlyDue(): string {
+  const y = new Date().getFullYear();
+  const today = todayISO();
+  const dates = [`${y}-01-15`, `${y}-04-15`, `${y}-06-15`, `${y}-09-15`];
+  for (const d of dates) {
+    if (d >= today) return d;
+  }
+  return `${y + 1}-01-15`;
+}
+
 export default function Home({ invoices, expenses, go }: Props) {
   const t = useStrings();
   const lang = useLang();
@@ -137,7 +149,7 @@ export default function Home({ invoices, expenses, go }: Props) {
 
   const moneyIn = invoices
     .filter((i) => i.status === "paid")
-    .reduce((s, i) => s + i.amount, 0);
+    .reduce((s, i) => s + invoiceTotal(i), 0);
   const moneyOut = expenses.reduce((s, e) => s + e.amount, 0);
   const left = moneyIn - moneyOut;
 
@@ -167,6 +179,18 @@ export default function Home({ invoices, expenses, go }: Props) {
           <div className="stat-label">{t.home.whatsLeft}</div>
           <div className="stat-value">{fmtMoney(left, lang)}</div>
         </div>
+      </div>
+
+      <div className="panel tax-reminder">
+        <h2 style={{ marginTop: 0 }}>🧾 {t.home.taxTitle}</h2>
+        <p style={{ margin: "4px 0" }}>
+          <strong>
+            {t.home.taxNext}: {fmtDate(nextQuarterlyDue(), lang)}
+          </strong>
+        </p>
+        <p className="tax-note" style={{ margin: 0 }}>
+          {t.home.taxSub}
+        </p>
       </div>
 
       <div className="panel">
@@ -199,7 +223,9 @@ export default function Home({ invoices, expenses, go }: Props) {
                     <span className={`badge${late ? " late" : " waiting"}`}>
                       {late ? t.invoices.late : t.invoices.waiting}
                     </span>
-                    <span className="row-amount positive">{fmtMoney(i.amount, lang)}</span>
+                    <span className="row-amount positive">
+                      {fmtMoney(invoiceTotal(i), lang)}
+                    </span>
                   </li>
                 );
               })}
