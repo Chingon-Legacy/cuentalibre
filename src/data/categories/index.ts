@@ -9,6 +9,7 @@ import { landscapingPack } from './landscaping';
 import { autorepairPack } from './autorepair';
 import { freelancerPack } from './freelancer';
 import { childcarePack } from './childcare';
+import { nonprofitPack } from './nonprofit';
 
 export interface BusinessTypeMeta {
   id: string;
@@ -41,6 +42,7 @@ export const categoryPacks: Record<string, CategoryPack> = {
   autorepair: autorepairPack,
   freelancer: freelancerPack,
   childcare: childcarePack,
+  nonprofit: nonprofitPack,
 };
 
 export function getPack(businessTypeId: string): CategoryPack {

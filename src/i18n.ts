@@ -22,6 +22,8 @@ const en = {
     customers: "Customers",
     contractors: "Contractors",
     loans: "Loans",
+    donations: "Donations",
+    donors: "Donors",
     reports: "Reports",
     settings: "Settings",
   },
@@ -29,6 +31,12 @@ const en = {
   onboarding: {
     langTitle: "Choose your language",
     langSub: "You can change this anytime in Settings.",
+    entityTitle: "What kind of organization is this?",
+    entitySub: "This decides which tools and categories you get. You can't change it later.",
+    entityForProfit: "For-profit business",
+    entityForProfitDesc: "A shop, service, or company that earns money.",
+    entityNonprofit: "Nonprofit organization",
+    entityNonprofitDesc: "A charity or community organization with a mission.",
     nameTitle: "What's your business called?",
     nameSub: "This appears at the top of your app and on your invoices.",
     namePh: "Business name",
@@ -69,6 +77,13 @@ const en = {
       "It's been a while since you saved your work — tap here to save it.",
     saveNow: "Save now",
     dismiss: "Later",
+    nfpDeadlineTitle: "IRS report due",
+    nfpDeadlineLine: "Your {year} annual report is due {date}.",
+    nfpDeadlineSub:
+      "Most nonprofits must file Form 990 every year. See Reports for your checklist.",
+    donationsMonth: "Donations this month",
+    donationsCount: "{n} donations",
+    noDonations: "No donations yet this month.",
   },
 
   invoices: {
@@ -329,6 +344,8 @@ const en = {
     businessType: "Business type",
     businessName: "Business name",
     businessState: "Business state",
+    entityType: "Organization type",
+    nonprofitInfo: "Nonprofit details",
     incomeGoal: "Monthly income goal",
     backupTitle: "Your data",
     saveWork: "Save work",
@@ -443,6 +460,15 @@ const en = {
     backupT: "How do backups work?",
     backupB:
       "Go to Settings → Save work to download a backup file with everything, from every business. Keep a copy somewhere safe, like a USB drive. Open backup restores it all.",
+    donationsT: "❤️ Donations",
+    donationsB:
+      "Record every gift your nonprofit receives — who gave, how much, when, and for which campaign. One tap prints an IRS-ready receipt for the donor.",
+    donorsT: "🙏 Donors",
+    donorsB:
+      "Everyone who has donated, with their totals by year — handy for thank-you letters and your annual report.",
+    nfpT: "What is Form 990?",
+    nfpB:
+      "Most nonprofits must tell the IRS about their finances every year using Form 990. Small ones (under $50,000) file a short free form online. The Reports screen figures out which one you need and prepares your numbers — but only the IRS website can accept the filing.",
   },
 
   reminders: {
@@ -659,6 +685,126 @@ const en = {
     cancel: "Cancel",
     progress: "{pct}% paid",
   },
+
+  donations: {
+    title: "Donations",
+    new: "Add donation",
+    donor: "Donor",
+    donorPh: "e.g. Maria Garcia",
+    amount: "Amount",
+    date: "Date",
+    campaign: "Campaign (optional)",
+    campaignPh: "e.g. Holiday drive 2026",
+    create: "Add donation",
+    save: "Save changes",
+    cancel: "Cancel",
+    edit: "Edit",
+    delete: "Delete",
+    confirmDelete: "Delete this donation?",
+    receipt: "Receipt",
+    emptyTitle: "No donations yet",
+    emptyBody:
+      "Record every donation here — you'll need them for your annual IRS report.",
+  },
+
+  donors: {
+    title: "Donors",
+    emptyTitle: "No donors yet",
+    emptyBody:
+      "Everyone who has donated shows up here, with their totals by year.",
+    donated: "Donated",
+    showDonations: "Show donations",
+    hideDonations: "Hide donations",
+  },
+
+  receipt: {
+    title: "Donation receipt",
+    orgLine: "Organization",
+    einLine: "EIN",
+    donorLine: "Donor",
+    amountLine: "Amount",
+    dateLine: "Date",
+    campaignLine: "Campaign",
+    noGoods:
+      "No goods or services were provided in exchange for this contribution.",
+    keepIt: "Keep this receipt for your tax records.",
+    print: "Print / Save as PDF",
+    close: "Close",
+  },
+
+  nonprofit: {
+    entityForProfit: "For-profit business",
+    entityNonprofit: "Nonprofit organization",
+    ein: "EIN",
+    einDesc:
+      "Your organization's Employer Identification Number from the IRS.",
+    fiscalYearEnd: "Fiscal year ends",
+    fiscalYearEndDesc:
+      "The month your organization's tax year ends. Most choose December.",
+    mission: "Mission statement",
+    missionDesc:
+      "A sentence or two about what your organization does. Used in your annual report.",
+  },
+
+  nfp: {
+    title: "Annual IRS report",
+    desc: "Figure out which Form 990 your organization files, and get everything ready.",
+    taxYear: "Tax year",
+    grossReceipts: "Gross receipts",
+    grossReceiptsWhy:
+      "All the money your organization received this tax year: donations plus paid invoices.",
+    formN: "Form 990-N (e-Postcard)",
+    formNWhy:
+      "Based on your {money} in revenue, you can file the short online form. It's free and takes a few minutes.",
+    formEZ: "Form 990-EZ",
+    formEZWhy:
+      "Based on your {money} in revenue, you file the short paper form. Note: we don't track your assets here — if they're over $500,000 you must file the full Form 990.",
+    formFull: "Full Form 990",
+    formFullWhy:
+      "Based on your {money} in revenue, you file the full Form 990. Take the financial summary below to your tax preparer.",
+    deadlineTitle: "Filing deadline",
+    deadlineLine: "Your {year} report is due {date}.",
+    revocationTitle: "Don't miss three years",
+    revocationText:
+      "If you don't file for 3 years in a row, the IRS automatically cancels your tax-exempt status. Filing every year keeps you safe.",
+    checklistTitle: "Your 990-N checklist",
+    checklistSub:
+      "The online form asks these 8 questions. What we know is filled in — the rest is marked TO FILL.",
+    cEin: "EIN",
+    cTaxYear: "Tax year",
+    cLegalName: "Legal name",
+    cAddress: "Mailing address",
+    cWebsite: "Website",
+    cReceipts: "Confirm gross receipts were $50,000 or less",
+    cNotTerminated: "State the organization has not terminated",
+    cOfficer: "Principal officer name",
+    toFill: "TO FILL",
+    howTitle: "How to file on the IRS website",
+    howSub:
+      "CuentaLibre prepares your numbers — only the IRS website can accept the filing. Nothing is filed from this app.",
+    how1:
+      'Go to irs.gov and search for "Form 990-N" to open the e-Postcard filing system.',
+    how2: "Create an account (or sign in) on the IRS filing site.",
+    how3: "Choose Form 990-N and answer the 8 questions using your checklist above.",
+    how4: "Submit before your deadline and save the confirmation email.",
+    finTitle: "Financial summary for your preparer",
+    finSub:
+      "Take this to your tax preparer for Form 990-EZ or the full Form 990.",
+    revByCat: "Revenue by category",
+    expProgram: "Program expenses",
+    expFundraising: "Fundraising expenses",
+    expAdmin: "Management & admin",
+    expTotal: "Total expenses",
+    netAssets: "Change in net assets",
+    download: "Download summary (CSV)",
+    pfNote:
+      "Private foundations always file Form 990-PF, a different form this helper doesn't prepare. Talk to your preparer.",
+    cannotFile:
+      "Important: this app prepares your report — it cannot file it. Filing happens only on the IRS website.",
+    disclaimer:
+      "CuentaLibre is not a tax professional. Verify everything with your tax preparer.",
+    noData: "No revenue recorded for this tax year yet.",
+  },
 };
 
 const es: typeof en = {
@@ -676,6 +822,8 @@ const es: typeof en = {
     customers: "Clientes",
     contractors: "Contratistas",
     loans: "Préstamos",
+    donations: "Donaciones",
+    donors: "Donantes",
     reports: "Reportes",
     settings: "Ajustes",
   },
@@ -683,6 +831,12 @@ const es: typeof en = {
   onboarding: {
     langTitle: "Elige tu idioma",
     langSub: "Puedes cambiarlo cuando quieras en Ajustes.",
+    entityTitle: "¿Qué tipo de organización es?",
+    entitySub: "Esto decide qué herramientas y categorías recibes. No podrás cambiarlo después.",
+    entityForProfit: "Negocio con fines de lucro",
+    entityForProfitDesc: "Una tienda, servicio o empresa que gana dinero.",
+    entityNonprofit: "Organización sin fines de lucro",
+    entityNonprofitDesc: "Una organización comunitaria o de caridad con una misión.",
     nameTitle: "¿Cómo se llama tu negocio?",
     nameSub: "Aparecerá en la parte superior de tu app y en tus facturas.",
     namePh: "Nombre del negocio",
@@ -723,6 +877,13 @@ const es: typeof en = {
       "Hace tiempo que no guardas tu trabajo — toca aquí para guardarlo.",
     saveNow: "Guardar ahora",
     dismiss: "Después",
+    nfpDeadlineTitle: "Reporte del IRS",
+    nfpDeadlineLine: "Tu reporte anual de {year} vence el {date}.",
+    nfpDeadlineSub:
+      "La mayoría de las organizaciones deben presentar el Formulario 990 cada año. Mira Reportes para tu lista.",
+    donationsMonth: "Donaciones este mes",
+    donationsCount: "{n} donaciones",
+    noDonations: "Aún no hay donaciones este mes.",
   },
 
   invoices: {
@@ -983,6 +1144,8 @@ const es: typeof en = {
     businessType: "Tipo de negocio",
     businessName: "Nombre del negocio",
     businessState: "Estado del negocio",
+    entityType: "Tipo de organización",
+    nonprofitInfo: "Datos de la organización",
     incomeGoal: "Meta mensual de ingresos",
     backupTitle: "Tus datos",
     saveWork: "Guardar respaldo",
@@ -1097,6 +1260,15 @@ const es: typeof en = {
     backupT: "¿Cómo funcionan los respaldos?",
     backupB:
       "Ve a Ajustes → Guardar respaldo para descargar un archivo con todo, de todos tus negocios. Guarda una copia en un lugar seguro, como una memoria USB. Abrir respaldo lo restaura todo.",
+    donationsT: "❤️ Donaciones",
+    donationsB:
+      "Registra cada regalo que recibe tu organización — quién dio, cuánto, cuándo y para qué campaña. Con un toque imprimes un recibo válido para el IRS.",
+    donorsT: "🙏 Donantes",
+    donorsB:
+      "Todas las personas que han donado, con sus totales por año — útil para cartas de agradecimiento y tu reporte anual.",
+    nfpT: "¿Qué es el Formulario 990?",
+    nfpB:
+      "La mayoría de las organizaciones sin fines de lucro deben informar sus finanzas al IRS cada año con el Formulario 990. Las pequeñas (menos de $50,000) presentan un formulario corto y gratis en línea. La pantalla de Reportes descubre cuál necesitas y prepara tus números — pero solo el sitio web del IRS puede aceptar la presentación.",
   },
 
   reminders: {
@@ -1312,6 +1484,126 @@ const es: typeof en = {
     create: "Agregar préstamo",
     cancel: "Cancelar",
     progress: "{pct}% pagado",
+  },
+
+  donations: {
+    title: "Donaciones",
+    new: "Agregar donación",
+    donor: "Donante",
+    donorPh: "p. ej. María García",
+    amount: "Cantidad",
+    date: "Fecha",
+    campaign: "Campaña (opcional)",
+    campaignPh: "p. ej. Colecta navideña 2026",
+    create: "Agregar donación",
+    save: "Guardar cambios",
+    cancel: "Cancelar",
+    edit: "Editar",
+    delete: "Borrar",
+    confirmDelete: "¿Borrar esta donación?",
+    receipt: "Recibo",
+    emptyTitle: "Aún no hay donaciones",
+    emptyBody:
+      "Registra aquí cada donación — las necesitarás para tu reporte anual del IRS.",
+  },
+
+  donors: {
+    title: "Donantes",
+    emptyTitle: "Aún no hay donantes",
+    emptyBody:
+      "Aquí aparecen todas las personas que han donado, con sus totales por año.",
+    donated: "Donó",
+    showDonations: "Ver donaciones",
+    hideDonations: "Ocultar donaciones",
+  },
+
+  receipt: {
+    title: "Recibo de donación",
+    orgLine: "Organización",
+    einLine: "EIN",
+    donorLine: "Donante",
+    amountLine: "Cantidad",
+    dateLine: "Fecha",
+    campaignLine: "Campaña",
+    noGoods:
+      "No se proporcionaron bienes ni servicios a cambio de esta contribución.",
+    keepIt: "Guarda este recibo para tus registros de impuestos.",
+    print: "Imprimir / Guardar como PDF",
+    close: "Cerrar",
+  },
+
+  nonprofit: {
+    entityForProfit: "Negocio con fines de lucro",
+    entityNonprofit: "Organización sin fines de lucro",
+    ein: "EIN",
+    einDesc:
+      "El número de identificación fiscal de tu organización, emitido por el IRS.",
+    fiscalYearEnd: "El año fiscal termina en",
+    fiscalYearEndDesc:
+      "El mes en que termina el año fiscal de tu organización. La mayoría elige diciembre.",
+    mission: "Misión",
+    missionDesc:
+      "Una o dos frases sobre lo que hace tu organización. Se usa en tu reporte anual.",
+  },
+
+  nfp: {
+    title: "Reporte anual del IRS",
+    desc: "Descubre cuál Formulario 990 presenta tu organización y prepara todo.",
+    taxYear: "Año fiscal",
+    grossReceipts: "Ingresos brutos",
+    grossReceiptsWhy:
+      "Todo el dinero que recibió tu organización este año fiscal: donaciones más facturas pagadas.",
+    formN: "Formulario 990-N (e-Postcard)",
+    formNWhy:
+      "Según tus {money} en ingresos, puedes presentar el formulario corto en línea. Es gratis y toma unos minutos.",
+    formEZ: "Formulario 990-EZ",
+    formEZWhy:
+      "Según tus {money} en ingresos, presentas el formulario corto en papel. Nota: aquí no llevamos tus activos — si superan $500,000 debes presentar el Formulario 990 completo.",
+    formFull: "Formulario 990 completo",
+    formFullWhy:
+      "Según tus {money} en ingresos, presentas el Formulario 990 completo. Lleva el resumen financiero a tu preparador de impuestos.",
+    deadlineTitle: "Fecha límite",
+    deadlineLine: "Tu reporte de {year} vence el {date}.",
+    revocationTitle: "No faltes tres años",
+    revocationText:
+      "Si no presentas el reporte por 3 años seguidos, el IRS cancela automáticamente tu exención de impuestos. Presentarlo cada año te mantiene a salvo.",
+    checklistTitle: "Tu lista para el 990-N",
+    checklistSub:
+      "El formulario en línea hace estas 8 preguntas. Lo que sabemos ya está lleno — lo demás está marcado POR COMPLETAR.",
+    cEin: "EIN",
+    cTaxYear: "Año fiscal",
+    cLegalName: "Nombre legal",
+    cAddress: "Dirección postal",
+    cWebsite: "Sitio web",
+    cReceipts: "Confirma que los ingresos brutos fueron $50,000 o menos",
+    cNotTerminated: "Declara que la organización no ha terminado",
+    cOfficer: "Nombre del oficial principal",
+    toFill: "POR COMPLETAR",
+    howTitle: "Cómo presentarlo en el sitio del IRS",
+    howSub:
+      "CuentaLibre prepara tus números — solo el sitio web del IRS puede aceptar la presentación. Nada se presenta desde esta app.",
+    how1:
+      'Ve a irs.gov y busca "Form 990-N" para abrir el sistema de presentación e-Postcard.',
+    how2: "Crea una cuenta (o inicia sesión) en el sitio del IRS.",
+    how3: "Elige el Formulario 990-N y responde las 8 preguntas usando tu lista.",
+    how4: "Envíalo antes de la fecha límite y guarda el correo de confirmación.",
+    finTitle: "Resumen financiero para tu preparador",
+    finSub:
+      "Lleva esto a tu preparador de impuestos para el Formulario 990-EZ o el 990 completo.",
+    revByCat: "Ingresos por categoría",
+    expProgram: "Gastos de programas",
+    expFundraising: "Gastos de recaudación",
+    expAdmin: "Administración",
+    expTotal: "Gastos totales",
+    netAssets: "Cambio en activos netos",
+    download: "Descargar resumen (CSV)",
+    pfNote:
+      "Las fundaciones privadas siempre presentan el Formulario 990-PF, un formulario distinto que esta guía no prepara. Habla con tu preparador.",
+    cannotFile:
+      "Importante: esta app prepara tu reporte — no puede presentarlo. La presentación solo se hace en el sitio web del IRS.",
+    disclaimer:
+      "CuentaLibre no es un profesional de impuestos. Verifica todo con tu preparador de impuestos.",
+    noData: "Aún no hay ingresos registrados para este año fiscal.",
   },
 };
 

@@ -15,6 +15,7 @@ import {
   getBusinesses,
   getContractorPayments,
   getContractors,
+  getDonations,
   getLoans,
   getLoanPayments,
   getExpenses,
@@ -28,6 +29,7 @@ import {
   setActiveBusinessId,
   setSetting,
   updateBusiness,
+  updateNonprofitFields,
   generateRecurringExpenses,
   generateRecurringInvoices,
 } from "./db";
@@ -38,6 +40,8 @@ import type {
   Business,
   Contractor,
   ContractorPayment,
+  Donation,
+  EntityType,
   Expense,
   Invoice,
   Lang,
@@ -65,6 +69,8 @@ import Mileage from "./screens/Mileage";
 import Customers from "./screens/Customers";
 import Contractors from "./screens/Contractors";
 import Loans from "./screens/Loans";
+import Donations from "./screens/Donations";
+import Donors from "./screens/Donors";
 import Reports from "./screens/Reports";
 import Settings from "./screens/Settings";
 
@@ -94,9 +100,11 @@ export interface BizState {
   /** Switch to another business (persists the choice, refreshes data). */
   switchBusiness: (id: number) => Promise<void>;
   /** Create a business and switch to it. */
-  addBusinessFlow: (name: string, type: string, state: string) => Promise<Business>;
+  addBusinessFlow: (name: string, type: string, state: string, entityType?: EntityType) => Promise<Business>;
   /** Rename / retype / restate the active business. */
   updateActiveBusiness: (input: { name: string; type: string; state: string }) => Promise<void>;
+  /** Update the active nonprofit's EIN, fiscal year end, and mission. */
+  updateActiveNonprofit: (input: { ein: string; fiscal_year_end: number; mission: string }) => Promise<void>;
   /** Delete the active business and everything in it (only when >1 exist). */
   deleteActiveBusiness: () => Promise<void>;
   /** After a backup restore: reload businesses, re-pick active, refresh data. */
@@ -106,6 +114,8 @@ export interface BizState {
   biz: string;
   /** Active business's state code. */
   stateCode: string;
+  /** True when the active business is a nonprofit organization. */
+  isNonprofit: boolean;
   /** Active business's category pack. */
   pack: CategoryPack;
   /** Active business's display name. */
@@ -121,10 +131,12 @@ const BizContext = createContext<BizState>({
     throw new Error("businesses not ready");
   },
   updateActiveBusiness: async () => undefined,
+  updateActiveNonprofit: async () => undefined,
   deleteActiveBusiness: async () => undefined,
   resyncAfterRestore: async () => undefined,
   biz: "freelancer",
   stateCode: "",
+  isNonprofit: false,
   pack: getPack("freelancer"),
   bizName: "",
 });
@@ -135,7 +147,12 @@ export function useBiz(): BizState {
 
 /* ---------- header / nav ---------- */
 
-const NAV_ITEMS: { id: Screen; icon: string; label: (t: Strings) => string }[] = [
+const NAV_ITEMS: {
+  id: Screen;
+  icon: string;
+  label: (t: Strings) => string;
+  nonprofitOnly?: boolean;
+}[] = [
   { id: "home", icon: "🏠", label: (t) => t.nav.home },
   { id: "invoices", icon: "🧾", label: (t) => t.nav.invoices },
   { id: "quotes", icon: "📝", label: (t) => t.nav.quotes },
@@ -145,6 +162,8 @@ const NAV_ITEMS: { id: Screen; icon: string; label: (t: Strings) => string }[] =
   { id: "time", icon: "⏱️", label: (t) => t.nav.time },
   { id: "mileage", icon: "🚗", label: (t) => t.nav.mileage },
   { id: "customers", icon: "👥", label: (t) => t.nav.customers },
+  { id: "donations", icon: "❤️", label: (t) => t.nav.donations, nonprofitOnly: true },
+  { id: "donors", icon: "🙏", label: (t) => t.nav.donors, nonprofitOnly: true },
   { id: "contractors", icon: "🤝", label: (t) => t.nav.contractors },
   { id: "loans", icon: "🏦", label: (t) => t.nav.loans },
   { id: "reports", icon: "📊", label: (t) => t.nav.reports },
@@ -226,6 +245,7 @@ interface AppData {
   services: Service[];
   timeEntries: TimeEntry[];
   trips: Trip[];
+  donations: Donation[];
 }
 
 const EMPTY_DATA: AppData = {
@@ -240,6 +260,7 @@ const EMPTY_DATA: AppData = {
   services: [],
   timeEntries: [],
   trips: [],
+  donations: [],
 };
 
 function Shell({
@@ -255,6 +276,19 @@ function Shell({
   const [screen, setScreen] = useState<Screen>("home");
   const [helpOpen, setHelpOpen] = useState(false);
   const [tourOpen, setTourOpen] = useState(false);
+  const { isNonprofit } = useBiz();
+
+  // Nonprofit-only screens (Donations, Donors) appear only for nonprofits.
+  const navItems = useMemo(
+    () => NAV_ITEMS.filter((item) => !item.nonprofitOnly || isNonprofit),
+    [isNonprofit]
+  );
+
+  // Switching between a for-profit and a nonprofit can hide the current
+  // screen — fall back to Home so nobody lands on a blank page.
+  useEffect(() => {
+    if (!navItems.some((item) => item.id === screen)) setScreen("home");
+  }, [navItems, screen]);
 
   // Friendly guide mode: show the tour once, unless it was seen or skipped.
   useEffect(() => {
@@ -315,7 +349,7 @@ function Shell({
       <header className="app-header">
         <Brand />
         <nav className="main-nav">
-          {NAV_ITEMS.map((item) => (
+          {navItems.map((item) => (
             <button
               key={item.id}
               className={`nav-btn${screen === item.id ? " active" : ""}`}
@@ -341,7 +375,13 @@ function Shell({
 
       <main>
         {ready && screen === "home" && (
-          <Home invoices={data.invoices} expenses={data.expenses} bills={data.bills} go={setScreen} />
+          <Home
+            invoices={data.invoices}
+            expenses={data.expenses}
+            bills={data.bills}
+            donations={data.donations}
+            go={setScreen}
+          />
         )}
         {ready && screen === "invoices" && (
           <Invoices invoices={data.invoices} services={data.services} refresh={refresh} />
@@ -365,6 +405,10 @@ function Shell({
           <Mileage trips={data.trips} refresh={refresh} />
         )}
         {ready && screen === "customers" && <Customers invoices={data.invoices} />}
+        {ready && screen === "donations" && (
+          <Donations donations={data.donations} refresh={refresh} />
+        )}
+        {ready && screen === "donors" && <Donors donations={data.donations} />}
         {ready && screen === "contractors" && (
           <Contractors
             contractors={data.contractors}
@@ -382,13 +426,14 @@ function Shell({
             contractors={data.contractors}
             contractorPayments={data.contractorPayments}
             trips={data.trips}
+            donations={data.donations}
           />
         )}
         {ready && screen === "settings" && <Settings refresh={refresh} />}
       </main>
 
       <nav className="mobile-nav">
-        {NAV_ITEMS.map((item) => (
+        {navItems.map((item) => (
           <button
             key={item.id}
             className={screen === item.id ? "active" : ""}
@@ -446,7 +491,7 @@ export default function App() {
 
   /** Reloads every money list for the active business. */
   const refreshData = useCallback(async (): Promise<AppData> => {
-    const [invoices, expenses, bills, quotes, contractors, contractorPayments, services, timeEntries, trips, loans, loanPayments] =
+    const [invoices, expenses, bills, quotes, contractors, contractorPayments, services, timeEntries, trips, loans, loanPayments, donations] =
       await Promise.all([
         getInvoices(),
         getExpenses(),
@@ -459,8 +504,9 @@ export default function App() {
         getTrips(),
         getLoans(),
         getLoanPayments(),
+        getDonations(),
       ]);
-    const next = { invoices, expenses, bills, quotes, contractors, contractorPayments, services, timeEntries, trips, loans, loanPayments };
+    const next = { invoices, expenses, bills, quotes, contractors, contractorPayments, services, timeEntries, trips, loans, loanPayments, donations };
     setData(next);
     return next;
   }, []);
@@ -491,8 +537,8 @@ export default function App() {
   );
 
   const addBusinessFlow = useCallback(
-    async (name: string, type: string, state: string): Promise<Business> => {
-      const id = await addBusiness({ name, type, state });
+    async (name: string, type: string, state: string, entityType: EntityType = "forprofit"): Promise<Business> => {
+      const id = await addBusiness({ name, type, state, entity_type: entityType });
       const list = await getBusinesses();
       setBusinesses(list);
       const created = list.find((b) => b.id === id);
@@ -510,6 +556,15 @@ export default function App() {
     async (input: { name: string; type: string; state: string }) => {
       if (activeId == null) return;
       await updateBusiness(activeId, input);
+      setBusinesses(await getBusinesses());
+    },
+    [activeId]
+  );
+
+  const updateActiveNonprofit = useCallback(
+    async (input: { ein: string; fiscal_year_end: number; mission: string }) => {
+      if (activeId == null) return;
+      await updateNonprofitFields(activeId, input);
       setBusinesses(await getBusinesses());
     },
     [activeId]
@@ -544,6 +599,7 @@ export default function App() {
   const biz = active?.type ?? "freelancer";
   const stateCode = active?.state ?? "";
   const bizName = active?.name ?? "";
+  const isNonprofit = active?.entity_type === "nonprofit";
   const pack = useMemo(() => getPack(biz), [biz]);
 
   const bizValue = useMemo<BizState>(
@@ -554,10 +610,12 @@ export default function App() {
       switchBusiness,
       addBusinessFlow,
       updateActiveBusiness,
+      updateActiveNonprofit,
       deleteActiveBusiness,
       resyncAfterRestore,
       biz,
       stateCode,
+      isNonprofit,
       pack,
       bizName,
     }),
@@ -568,10 +626,12 @@ export default function App() {
       switchBusiness,
       addBusinessFlow,
       updateActiveBusiness,
+      updateActiveNonprofit,
       deleteActiveBusiness,
       resyncAfterRestore,
       biz,
       stateCode,
+      isNonprofit,
       pack,
       bizName,
     ]
@@ -611,9 +671,9 @@ export default function App() {
   }, []);
 
   const finishOnboarding = useCallback(
-    async (l: Lang, name: string, type: string, sc: string) => {
+    async (l: Lang, name: string, entityType: EntityType, type: string, sc: string) => {
       setLang(l);
-      const id = await addBusiness({ name, type, state: sc });
+      const id = await addBusiness({ name, type, state: sc, entity_type: entityType });
       setActiveBusinessId(id);
       setActiveId(id);
       localStorage.setItem("cl-activebiz", String(id));

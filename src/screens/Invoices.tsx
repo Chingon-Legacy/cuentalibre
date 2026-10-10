@@ -142,7 +142,7 @@ function InvoiceDetail({
 export default function Invoices({ invoices, services, refresh }: Props) {
   const t = useStrings();
   const lang = useLang();
-  const { pack, stateCode, bizName } = useBiz();
+  const { pack, stateCode, bizName, isNonprofit } = useBiz();
   const [showForm, setShowForm] = useState(false);
   const [editing, setEditing] = useState<Invoice | null>(null);
   const [viewing, setViewing] = useState<Invoice | null>(null);
@@ -184,8 +184,11 @@ export default function Invoices({ invoices, services, refresh }: Props) {
     setCategory(pack.income[0]?.id ?? "other");
     setDueDate(todayISO());
     setRecurrence("none");
-    setTaxOn(stateRatePct !== "");
-    setTaxRatePct(stateRatePct);
+    // Nonprofits skip sales tax here (most nonprofit sales are exempt;
+    // some states do tax certain nonprofit sales — the rate stays editable
+    // on the few invoices that need it via the printed total only).
+    setTaxOn(!isNonprofit && stateRatePct !== "");
+    setTaxRatePct(isNonprofit ? "" : stateRatePct);
     setPayMethod(null);
     setEditing(null);
     setShowForm(false);
@@ -198,9 +201,10 @@ export default function Invoices({ invoices, services, refresh }: Props) {
     setCategory(pack.income[0]?.id ?? "other");
     setDueDate(todayISO());
     setRecurrence("none");
-    // Default to the business state's base rate; 0%-tax states get no tax line.
-    setTaxOn(stateRatePct !== "");
-    setTaxRatePct(stateRatePct);
+    // Default to the business state's base rate; 0%-tax states get no tax
+    // line. Nonprofits skip the tax line (see note in reset()).
+    setTaxOn(!isNonprofit && stateRatePct !== "");
+    setTaxRatePct(isNonprofit ? "" : stateRatePct);
     setPayMethod(null);
     setEditing(null);
     setShowForm(true);
@@ -394,40 +398,44 @@ export default function Invoices({ invoices, services, refresh }: Props) {
                 onChange={(e) => setDueDate(e.target.value)}
               />
             </div>
-            <div className="field">
-              <label className="check-row">
-                <input
-                  type="checkbox"
-                  checked={taxOn}
-                  onChange={(e) => {
-                    setTaxOn(e.target.checked);
-                    if (e.target.checked && !taxRatePct) setTaxRatePct(stateRatePct);
-                  }}
-                />
-                {t.invoices.taxAdd}
-              </label>
-              {taxOn && (
-                <>
-                  <div className="tax-rate-row">
-                    <input
-                      type="number"
-                      min="0"
-                      max="100"
-                      step="0.01"
-                      value={taxRatePct}
-                      onChange={(e) => setTaxRatePct(e.target.value)}
-                      placeholder={stateRatePct || "0"}
-                      aria-label={t.invoices.taxRate}
-                    />
-                    <span className="pct">%</span>
-                    <span className="tax-preview">
-                      {t.invoices.salesTax}: {fmtMoney(previewTax, lang)}
-                    </span>
-                  </div>
-                  <p className="tax-note">{t.invoices.taxNote}</p>
-                </>
-              )}
-            </div>
+            {/* Sales tax is a for-profit concern — nonprofits skip it
+                (most nonprofit sales are exempt; see the note in reset()). */}
+            {!isNonprofit && (
+              <div className="field">
+                <label className="check-row">
+                  <input
+                    type="checkbox"
+                    checked={taxOn}
+                    onChange={(e) => {
+                      setTaxOn(e.target.checked);
+                      if (e.target.checked && !taxRatePct) setTaxRatePct(stateRatePct);
+                    }}
+                  />
+                  {t.invoices.taxAdd}
+                </label>
+                {taxOn && (
+                  <>
+                    <div className="tax-rate-row">
+                      <input
+                        type="number"
+                        min="0"
+                        max="100"
+                        step="0.01"
+                        value={taxRatePct}
+                        onChange={(e) => setTaxRatePct(e.target.value)}
+                        placeholder={stateRatePct || "0"}
+                        aria-label={t.invoices.taxRate}
+                      />
+                      <span className="pct">%</span>
+                      <span className="tax-preview">
+                        {t.invoices.salesTax}: {fmtMoney(previewTax, lang)}
+                      </span>
+                    </div>
+                    <p className="tax-note">{t.invoices.taxNote}</p>
+                  </>
+                )}
+              </div>
+            )}
             {!editing && (
               <div className="field">
                 <label>{t.invoices.repeat}</label>

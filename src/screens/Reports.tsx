@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useBiz } from "../App";
 import { downloadCsv, downloadText, toCsv } from "../backup";
 import { invoiceTotal } from "../db";
@@ -6,7 +6,8 @@ import { businessTypes } from "../data/categories";
 import { US_STATES } from "../data/us-states";
 import { tripDeduction } from "../data/mileage-rates";
 import { fmtDate, fmtMoney, todayISO, useLang, useStrings } from "../i18n";
-import type { Contractor, ContractorPayment, Expense, Invoice, Trip } from "../types";
+import { nfpDeadlineDate } from "./Home";
+import type { Contractor, ContractorPayment, Donation, Expense, Invoice, Trip } from "../types";
 
 type ReportId = "summary" | "income" | "expenses" | "owes" | "tax" | "monthly" | "taxguide";
 
@@ -16,6 +17,7 @@ interface Props {
   contractors: Contractor[];
   contractorPayments: ContractorPayment[];
   trips: Trip[];
+  donations: Donation[];
 }
 
 function firstOfMonth(): string {
@@ -31,13 +33,330 @@ function groupByCategory(items: { category: string; amount: number }[]): [string
 
 const money = (n: number) => (Math.round(n * 100) / 100).toFixed(2);
 
-export default function Reports({ invoices, expenses, contractors, contractorPayments, trips }: Props) {
+/* ------------------------------------------------------------------ */
+/* Nonprofit annual IRS report helper (Form 990 series).               */
+/*                                                                     */
+/* The app PREPARES everything but CANNOT file — only the IRS website  */
+/* accepts 990 filings. That is stated plainly in the UI, in both      */
+/* languages. Thresholds follow the verified IRS rules:                */
+/*   990-N:  gross receipts normally ≤ $50,000 (online-only, 8 items)   */
+/*   990-EZ: receipts < $200,000 AND assets < $500,000                  */
+/*   990:    receipts ≥ $200,000 OR assets ≥ $500,000                   */
+/* Missing 3 consecutive years → automatic revocation of tax-exempt    */
+/* status. Private foundations always file 990-PF (noted, not prepared).*/
+/* ------------------------------------------------------------------ */
+
+/** Which Form 990 applies, using the IRS gross-receipts thresholds. */
+function formFor(receipts: number): "N" | "EZ" | "full" {
+  if (receipts <= 50000) return "N";
+  if (receipts < 200000) return "EZ";
+  return "full";
+}
+
+/** Fiscal-year window for a tax year: starts the month after fiscal_year_end
+ *  of the prior period, ends on fiscal_year_end of the tax year.
+ *  E.g. December year-end + tax year 2026 → 2026-01-01 … 2026-12-31;
+ *  June year-end + tax year 2026 → 2025-07-01 … 2026-06-30. */
+function fiscalWindow(taxYear: number, fyEnd: number): [string, string] {
+  const startMonth = (fyEnd % 12) + 1;
+  const startYear = taxYear - (fyEnd === 12 ? 0 : 1);
+  const pad = (n: number) => String(n).padStart(2, "0");
+  const lastDay = new Date(taxYear, fyEnd, 0).getDate();
+  return [
+    `${startYear}-${pad(startMonth)}-01`,
+    `${taxYear}-${pad(fyEnd)}-${pad(lastDay)}`,
+  ];
+}
+
+/** Map a nonprofit expense category to a 990 functional-expense bucket.
+ *  A starting point only — the preparer confirms the split. */
+function funcOf(catId: string): "program" | "fundraising" | "admin" {
+  if (catId === "program-expenses" || catId === "grants-scholarships") return "program";
+  if (catId === "fundraising-expenses") return "fundraising";
+  return "admin";
+}
+
+function NfpAnnualReport({
+  invoices,
+  expenses,
+  donations,
+  catLabel,
+}: {
+  invoices: Invoice[];
+  expenses: Expense[];
+  donations: Donation[];
+  catLabel: (id: string) => string;
+}) {
   const t = useStrings();
   const lang = useLang();
-  const { pack, active, bizName } = useBiz();
+  const { active, bizName } = useBiz();
+  const fyEnd =
+    active && active.fiscal_year_end >= 1 && active.fiscal_year_end <= 12
+      ? active.fiscal_year_end
+      : 12;
+
+  const years = useMemo(() => {
+    const set = new Set<number>();
+    for (const d of donations) set.add(Number(d.date.slice(0, 4)));
+    for (const i of invoices) set.add(Number(i.due_date.slice(0, 4)));
+    for (const e of expenses) set.add(Number(e.date.slice(0, 4)));
+    set.add(new Date().getFullYear());
+    return [...set].filter((y) => Number.isFinite(y) && y > 2000).sort((a, b) => b - a);
+  }, [donations, invoices, expenses]);
+
+  const [taxYear, setTaxYear] = useState<number>(() => new Date().getFullYear());
+
+  const [winStart, winEnd] = useMemo(() => fiscalWindow(taxYear, fyEnd), [taxYear, fyEnd]);
+  const inWindow = (d: string) => d >= winStart && d <= winEnd;
+
+  const donInWindow = useMemo(
+    () => donations.filter((d) => inWindow(d.date)),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [donations, winStart, winEnd]
+  );
+  const paidInWindow = useMemo(
+    () => invoices.filter((i) => i.status === "paid" && inWindow(i.due_date)),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [invoices, winStart, winEnd]
+  );
+  const expInWindow = useMemo(
+    () => expenses.filter((e) => inWindow(e.date)),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [expenses, winStart, winEnd]
+  );
+
+  const donationTotal = donInWindow.reduce((s, d) => s + d.amount, 0);
+  const invoiceRevenue = paidInWindow.reduce((s, i) => s + invoiceTotal(i), 0);
+  const grossReceipts = donationTotal + invoiceRevenue;
+
+  const invoiceByCat = useMemo(() => groupByCategory(paidInWindow), [paidInWindow]);
+  const expByCat = useMemo(() => groupByCategory(expInWindow), [expInWindow]);
+
+  const funcTotals = useMemo(() => {
+    const f = { program: 0, fundraising: 0, admin: 0 };
+    for (const [c, a] of expByCat) f[funcOf(c)] += a;
+    return f;
+  }, [expByCat]);
+  const expTotal = funcTotals.program + funcTotals.fundraising + funcTotals.admin;
+  const netChange = grossReceipts - expTotal;
+
+  const form = formFor(grossReceipts);
+  const deadline = nfpDeadlineDate(fyEnd, taxYear);
+
+  const checklist: { label: string; value: string | null }[] = [
+    { label: t.nfp.cEin, value: active?.ein?.trim() ? active.ein : null },
+    { label: t.nfp.cTaxYear, value: String(taxYear) },
+    { label: t.nfp.cLegalName, value: bizName || null },
+    { label: t.nfp.cAddress, value: null },
+    { label: t.nfp.cWebsite, value: null },
+    { label: t.nfp.cReceipts, value: `✓ ${fmtMoney(grossReceipts, lang)}` },
+    { label: t.nfp.cNotTerminated, value: "✓" },
+    { label: t.nfp.cOfficer, value: null },
+  ];
+
+  const downloadSummary = async () => {
+    const headers = [t.reports.category, t.reports.amount];
+    const rows: (string | number)[][] = [
+      [t.nfp.grossReceipts, money(grossReceipts)],
+      [`  ${t.donations.title}`, money(donationTotal)],
+      ...invoiceByCat.map(([c, a]): (string | number)[] => [`  ${catLabel(c)}`, money(a)]),
+      [t.nfp.expTotal, money(expTotal)],
+      [`  ${t.nfp.expProgram}`, money(funcTotals.program)],
+      [`  ${t.nfp.expFundraising}`, money(funcTotals.fundraising)],
+      [`  ${t.nfp.expAdmin}`, money(funcTotals.admin)],
+      [t.nfp.netAssets, money(netChange)],
+    ];
+    await downloadCsv(`cuentalibre-990-summary-${taxYear}.csv`, toCsv(headers, rows));
+  };
+
+  return (
+    <div className="panel">
+      <h2 style={{ marginTop: 0 }}>🏛️ {t.nfp.title}</h2>
+      <p className="subtitle">{t.nfp.desc}</p>
+
+      <div className="report-controls">
+        <div className="field">
+          <label>{t.nfp.taxYear}</label>
+          <select value={taxYear} onChange={(e) => setTaxYear(Number(e.target.value))}>
+            {years.map((y) => (
+              <option key={y} value={y}>
+                {y}
+              </option>
+            ))}
+          </select>
+        </div>
+      </div>
+
+      {/* (a) gross receipts for the selected tax year */}
+      <div className="tax-block">
+        <div className="tax-line">
+          <span className="tax-name">💰 {t.nfp.grossReceipts}</span>
+          <span className="tax-amount">{fmtMoney(grossReceipts, lang)}</span>
+        </div>
+        <p className="tax-why">{t.nfp.grossReceiptsWhy}</p>
+        {grossReceipts === 0 && <p className="empty-note">{t.nfp.noData}</p>}
+      </div>
+
+      {/* (b) which form applies */}
+      <div className="tax-block">
+        <div className="tax-line">
+          <span className="tax-name">
+            📋 {form === "N" ? t.nfp.formN : form === "EZ" ? t.nfp.formEZ : t.nfp.formFull}
+          </span>
+        </div>
+        <p className="tax-why">
+          {(form === "N" ? t.nfp.formNWhy : form === "EZ" ? t.nfp.formEZWhy : t.nfp.formFullWhy).replace(
+            "{money}",
+            fmtMoney(grossReceipts, lang)
+          )}
+        </p>
+      </div>
+
+      {/* (c) deadline from fiscal year end */}
+      <div className="tax-block">
+        <div className="tax-line">
+          <span className="tax-name">⏰ {t.nfp.deadlineTitle}</span>
+          <span className="tax-amount">{fmtDate(deadline, lang)}</span>
+        </div>
+        <p className="tax-why">
+          {t.nfp.deadlineLine
+            .replace("{year}", String(taxYear))
+            .replace("{date}", fmtDate(deadline, lang))}
+        </p>
+      </div>
+
+      {/* (d) 3-year revocation warning */}
+      <div className="tax-block">
+        <div className="tax-line">
+          <span className="tax-name">⚠️ {t.nfp.revocationTitle}</span>
+        </div>
+        <p className="tax-why">{t.nfp.revocationText}</p>
+      </div>
+
+      {/* (e) 990-N checklist + how to file */}
+      {form === "N" && (
+        <>
+          <h3 style={{ marginTop: 24 }}>{t.nfp.checklistTitle}</h3>
+          <p className="subtitle">{t.nfp.checklistSub}</p>
+          <table className="report">
+            <tbody>
+              {checklist.map((c) => (
+                <tr key={c.label}>
+                  <td>{c.label}</td>
+                  <td className="num">
+                    {c.value ? (
+                      <span>{c.value}</span>
+                    ) : (
+                      <span className="badge waiting">{t.nfp.toFill}</span>
+                    )}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+
+          <h3 style={{ marginTop: 24 }}>{t.nfp.howTitle}</h3>
+          <p className="subtitle">{t.nfp.howSub}</p>
+          <ol className="tour-list">
+            <li>{t.nfp.how1}</li>
+            <li>{t.nfp.how2}</li>
+            <li>{t.nfp.how3}</li>
+            <li>{t.nfp.how4}</li>
+          </ol>
+        </>
+      )}
+
+      {/* (f) 990-EZ / full: preparer financial summary */}
+      {form !== "N" && (
+        <>
+          <h3 style={{ marginTop: 24 }}>{t.nfp.finTitle}</h3>
+          <p className="subtitle">{t.nfp.finSub}</p>
+          {active?.mission && (
+            <p className="tax-why">
+              <strong>{t.nonprofit.mission}:</strong> {active.mission}
+            </p>
+          )}
+          <table className="report">
+            <thead>
+              <tr>
+                <th>{t.reports.category}</th>
+                <th className="num">{t.reports.amount}</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr className="total">
+                <td>{t.nfp.grossReceipts}</td>
+                <td className="num">{fmtMoney(grossReceipts, lang)}</td>
+              </tr>
+              <tr>
+                <td style={{ paddingLeft: 24 }}>{t.donations.title}</td>
+                <td className="num">{fmtMoney(donationTotal, lang)}</td>
+              </tr>
+              {invoiceByCat.map(([c, a]) => (
+                <tr key={c}>
+                  <td style={{ paddingLeft: 24 }}>{catLabel(c)}</td>
+                  <td className="num">{fmtMoney(a, lang)}</td>
+                </tr>
+              ))}
+              <tr className="total">
+                <td>{t.nfp.expTotal}</td>
+                <td className="num">{fmtMoney(expTotal, lang)}</td>
+              </tr>
+              <tr>
+                <td style={{ paddingLeft: 24 }}>{t.nfp.expProgram}</td>
+                <td className="num">{fmtMoney(funcTotals.program, lang)}</td>
+              </tr>
+              <tr>
+                <td style={{ paddingLeft: 24 }}>{t.nfp.expFundraising}</td>
+                <td className="num">{fmtMoney(funcTotals.fundraising, lang)}</td>
+              </tr>
+              <tr>
+                <td style={{ paddingLeft: 24 }}>{t.nfp.expAdmin}</td>
+                <td className="num">{fmtMoney(funcTotals.admin, lang)}</td>
+              </tr>
+              <tr className="total">
+                <td>{t.nfp.netAssets}</td>
+                <td className="num">{fmtMoney(netChange, lang)}</td>
+              </tr>
+            </tbody>
+          </table>
+          <div className="field" style={{ marginTop: 12 }}>
+            <button type="button" className="btn secondary" onClick={downloadSummary}>
+              ⬇ {t.nfp.download}
+            </button>
+          </div>
+        </>
+      )}
+
+      {/* private foundation note */}
+      <div className="tax-block" style={{ marginTop: 24 }}>
+        <p className="tax-why">ℹ️ {t.nfp.pfNote}</p>
+      </div>
+
+      {/* plain statement: the app cannot file */}
+      <p className="tax-why" style={{ marginTop: 16 }}>
+        <strong>🚫 {t.nfp.cannotFile}</strong>
+      </p>
+      <p className="disclaimer">{t.nfp.disclaimer}</p>
+    </div>
+  );
+}
+
+export default function Reports({ invoices, expenses, contractors, contractorPayments, trips, donations }: Props) {
+  const t = useStrings();
+  const lang = useLang();
+  const { pack, active, bizName, isNonprofit } = useBiz();
   const [report, setReport] = useState<ReportId>("summary");
   const [from, setFrom] = useState(firstOfMonth());
   const [to, setTo] = useState(todayISO());
+
+  // Switching to a nonprofit hides the for-profit tax reports —
+  // drop back to the summary so nobody lands on a hidden view.
+  useEffect(() => {
+    if (isNonprofit && (report === "tax" || report === "taxguide")) {
+      setReport("summary");
+    }
+  }, [isNonprofit, report]);
 
   const inRange = (d: string) => d >= from && d <= to;
 
@@ -135,15 +454,24 @@ export default function Reports({ invoices, expenses, contractors, contractorPay
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [from, to, invoices, expenses, lang]);
 
-  const reportTypes: { id: ReportId; label: string }[] = [
-    { id: "summary", label: t.reports.tSummary },
-    { id: "income", label: t.reports.tIncomeByCat },
-    { id: "expenses", label: t.reports.tExpensesByCat },
-    { id: "owes", label: t.reports.tWhoOwes },
-    { id: "tax", label: t.reports.tTax },
-    { id: "taxguide", label: t.reports.tTaxGuide },
-    { id: "monthly", label: t.reports.tMonthly },
-  ];
+  // Nonprofits get the 990 helper instead of the for-profit tax reports.
+  const reportTypes: { id: ReportId; label: string }[] = isNonprofit
+    ? [
+        { id: "summary", label: t.reports.tSummary },
+        { id: "income", label: t.reports.tIncomeByCat },
+        { id: "expenses", label: t.reports.tExpensesByCat },
+        { id: "owes", label: t.reports.tWhoOwes },
+        { id: "monthly", label: t.reports.tMonthly },
+      ]
+    : [
+        { id: "summary", label: t.reports.tSummary },
+        { id: "income", label: t.reports.tIncomeByCat },
+        { id: "expenses", label: t.reports.tExpensesByCat },
+        { id: "owes", label: t.reports.tWhoOwes },
+        { id: "tax", label: t.reports.tTax },
+        { id: "taxguide", label: t.reports.tTaxGuide },
+        { id: "monthly", label: t.reports.tMonthly },
+      ];
 
   const pickReport = (id: ReportId) => {
     setReport(id);
@@ -367,6 +695,15 @@ export default function Reports({ invoices, expenses, contractors, contractorPay
     <div className="page">
       <h1>📊 {t.reports.title}</h1>
       <p className="subtitle">{t.reports.type}</p>
+
+      {isNonprofit && (
+        <NfpAnnualReport
+          invoices={invoices}
+          expenses={expenses}
+          donations={donations}
+          catLabel={catLabel}
+        />
+      )}
 
       <div className="panel">
         <div className="report-controls">
@@ -618,27 +955,31 @@ export default function Reports({ invoices, expenses, contractors, contractorPay
         )}
       </div>
 
-      <div className="panel tax-package">
-        <h2 style={{ marginTop: 0 }}>📦 {t.taxpackage.title}</h2>
-        <p className="subtitle">{t.taxpackage.desc}</p>
-        <div className="report-controls" style={{ marginBottom: 0 }}>
-          <div className="field">
-            <label>{t.taxpackage.year}</label>
-            <select value={taxYear} onChange={(e) => setTaxYear(Number(e.target.value))}>
-              {taxYears.map((y) => (
-                <option key={y} value={y}>
-                  {y}
-                </option>
-              ))}
-            </select>
-          </div>
-          <div className="field">
-            <button type="button" className="btn" disabled={pkgWorking} onClick={downloadPackage}>
-              {t.taxpackage.btn}
-            </button>
+      {/* The one-tap for-profit tax package doesn't apply to nonprofits —
+          they get the 990 helper above instead. */}
+      {!isNonprofit && (
+        <div className="panel tax-package">
+          <h2 style={{ marginTop: 0 }}>📦 {t.taxpackage.title}</h2>
+          <p className="subtitle">{t.taxpackage.desc}</p>
+          <div className="report-controls" style={{ marginBottom: 0 }}>
+            <div className="field">
+              <label>{t.taxpackage.year}</label>
+              <select value={taxYear} onChange={(e) => setTaxYear(Number(e.target.value))}>
+                {taxYears.map((y) => (
+                  <option key={y} value={y}>
+                    {y}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div className="field">
+              <button type="button" className="btn" disabled={pkgWorking} onClick={downloadPackage}>
+                {t.taxpackage.btn}
+              </button>
+            </div>
           </div>
         </div>
-      </div>
+      )}
     </div>
   );
 }

@@ -5,6 +5,8 @@ import type {
   Business,
   Contractor,
   ContractorPayment,
+  Donation,
+  EntityType,
   Expense,
   Invoice,
   InvoiceStatus,
@@ -126,6 +128,7 @@ const MONEY_TABLES = [
   "trips",
   "loans",
   "loan_payments",
+  "donations",
 ] as const;
 
 export async function initDb(): Promise<void> {
@@ -135,7 +138,11 @@ export async function initDb(): Promise<void> {
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       name TEXT NOT NULL,
       type TEXT NOT NULL DEFAULT 'freelancer',
+      entity_type TEXT NOT NULL DEFAULT 'forprofit',
       state TEXT NOT NULL DEFAULT '',
+      ein TEXT NOT NULL DEFAULT '',
+      fiscal_year_end INTEGER NOT NULL DEFAULT 12,
+      mission TEXT NOT NULL DEFAULT '',
       created_at TEXT NOT NULL
     )
   `);
@@ -272,6 +279,17 @@ export async function initDb(): Promise<void> {
       created_at TEXT NOT NULL
     )
   `);
+  await db.execute(`
+    CREATE TABLE IF NOT EXISTS donations (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      business_id INTEGER NOT NULL DEFAULT 1,
+      donor TEXT NOT NULL,
+      amount REAL NOT NULL,
+      date TEXT NOT NULL,
+      campaign TEXT NOT NULL DEFAULT '',
+      created_at TEXT NOT NULL
+    )
+  `);
 
   // Migrations for databases created before these columns existed.
   if (!(await columnExists("invoices", "business_id"))) {
@@ -295,6 +313,18 @@ export async function initDb(): Promise<void> {
   for (const [col, def] of newCols) {
     if (!(await columnExists("invoices", col))) {
       await db.execute(`ALTER TABLE invoices ADD COLUMN ${col} ${def}`);
+    }
+  }
+  // Nonprofit support: existing businesses default to for-profit.
+  const bizCols: [string, string][] = [
+    ["entity_type", "TEXT NOT NULL DEFAULT 'forprofit'"],
+    ["ein", "TEXT NOT NULL DEFAULT ''"],
+    ["fiscal_year_end", "INTEGER NOT NULL DEFAULT 12"],
+    ["mission", "TEXT NOT NULL DEFAULT ''"],
+  ];
+  for (const [col, def] of bizCols) {
+    if (!(await columnExists("businesses", col))) {
+      await db.execute(`ALTER TABLE businesses ADD COLUMN ${col} ${def}`);
     }
   }
   // Receipt photos live in a new nullable column on expenses.
@@ -390,13 +420,26 @@ export async function addBusiness(input: {
   name: string;
   type: string;
   state: string;
+  entity_type?: EntityType;
 }): Promise<number> {
   const db = await getDb();
   const res = await db.execute(
-    "INSERT INTO businesses (name, type, state, created_at) VALUES ($1, $2, $3, $4)",
-    [input.name, input.type, input.state, new Date().toISOString()]
+    "INSERT INTO businesses (name, type, entity_type, state, created_at) VALUES ($1, $2, $3, $4, $5)",
+    [input.name, input.type, input.entity_type ?? "forprofit", input.state, new Date().toISOString()]
   );
   return Number(res.lastInsertId ?? 0);
+}
+
+/** Updates a nonprofit's IRS-facing fields (EIN, fiscal year end, mission). */
+export async function updateNonprofitFields(
+  id: number,
+  input: { ein: string; fiscal_year_end: number; mission: string }
+): Promise<void> {
+  const db = await getDb();
+  await db.execute(
+    "UPDATE businesses SET ein = $1, fiscal_year_end = $2, mission = $3 WHERE id = $4",
+    [input.ein.trim(), input.fiscal_year_end, input.mission.trim(), id]
+  );
 }
 
 export async function updateBusiness(
@@ -943,6 +986,44 @@ export async function deleteLoanPayment(id: number): Promise<void> {
   await db.execute(`DELETE FROM loan_payments WHERE id = $1 ${bizFilterAnd()}`, [id]);
 }
 
+// ---- donations (nonprofits) ----
+
+export async function getDonations(): Promise<Donation[]> {
+  const db = await getDb();
+  return db.select<Donation[]>(
+    `SELECT * FROM donations ${bizFilter()} ORDER BY date DESC, id DESC`
+  );
+}
+
+export async function addDonation(input: {
+  donor: string;
+  amount: number;
+  date: string;
+  campaign: string;
+}): Promise<void> {
+  const db = await getDb();
+  await db.execute(
+    "INSERT INTO donations (business_id, donor, amount, date, campaign, created_at) VALUES ($1, $2, $3, $4, $5, $6)",
+    [activeBusinessId, input.donor, input.amount, input.date, input.campaign, new Date().toISOString()]
+  );
+}
+
+export async function updateDonation(
+  id: number,
+  input: { donor: string; amount: number; date: string; campaign: string }
+): Promise<void> {
+  const db = await getDb();
+  await db.execute(
+    `UPDATE donations SET donor = $1, amount = $2, date = $3, campaign = $4 WHERE id = $5 ${bizFilterAnd()}`,
+    [input.donor, input.amount, input.date, input.campaign, id]
+  );
+}
+
+export async function deleteDonation(id: number): Promise<void> {
+  const db = await getDb();
+  await db.execute(`DELETE FROM donations WHERE id = $1 ${bizFilterAnd()}`, [id]);
+}
+
 // ---- full export (unfiltered) for backups ----
 
 export interface AllData {
@@ -958,11 +1039,12 @@ export interface AllData {
   trips: Trip[];
   loans: Loan[];
   loanPayments: LoanPayment[];
+  donations: Donation[];
 }
 
 export async function exportAllData(): Promise<AllData> {
   const db = await getDb();
-  const [businesses, invoices, expenses, bills, quotes, contractors, contractorPayments, services, timeEntries, trips, loans, loanPayments] =
+  const [businesses, invoices, expenses, bills, quotes, contractors, contractorPayments, services, timeEntries, trips, loans, loanPayments, donations] =
     await Promise.all([
       db.select<Business[]>("SELECT * FROM businesses ORDER BY id ASC"),
       db.select<Invoice[]>("SELECT * FROM invoices ORDER BY id ASC"),
@@ -976,8 +1058,9 @@ export async function exportAllData(): Promise<AllData> {
       db.select<Trip[]>("SELECT * FROM trips ORDER BY id ASC"),
       db.select<Loan[]>("SELECT * FROM loans ORDER BY id ASC"),
       db.select<LoanPayment[]>("SELECT * FROM loan_payments ORDER BY id ASC"),
+      db.select<Donation[]>("SELECT * FROM donations ORDER BY id ASC"),
     ]);
-  return { businesses, invoices, expenses, bills, quotes, contractors, contractorPayments, services, timeEntries, trips, loans, loanPayments };
+  return { businesses, invoices, expenses, bills, quotes, contractors, contractorPayments, services, timeEntries, trips, loans, loanPayments, donations };
 }
 
 // ---- backup / restore ----
@@ -1004,17 +1087,28 @@ export async function importBackup(data: BackupData): Promise<void> {
     // v2 backup: explicit ids preserve every link.
     for (const b of data.businesses) {
       await db.execute(
-        "INSERT INTO businesses (id, name, type, state, created_at) VALUES ($1, $2, $3, $4, $5)",
-        [b.id, b.name, b.type ?? "freelancer", b.state ?? "", b.created_at]
+        "INSERT INTO businesses (id, name, type, entity_type, state, ein, fiscal_year_end, mission, created_at) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)",
+        [
+          b.id,
+          b.name,
+          b.type ?? "freelancer",
+          b.entity_type ?? "forprofit",
+          b.state ?? "",
+          b.ein ?? "",
+          b.fiscal_year_end ?? 12,
+          b.mission ?? "",
+          b.created_at,
+        ]
       );
     }
   } else {
     // v1 backup (pre-multi-business): fold into one business.
     const res = await db.execute(
-      "INSERT INTO businesses (name, type, state, created_at) VALUES ($1, $2, $3, $4)",
+      "INSERT INTO businesses (name, type, entity_type, state, created_at) VALUES ($1, $2, $3, $4, $5)",
       [
         data.businessName || "Business 1",
         data.businessType || "freelancer",
+        "forprofit",
         (data as { businessState?: string }).businessState || "",
         new Date().toISOString(),
       ]
@@ -1182,6 +1276,14 @@ export async function importBackup(data: BackupData): Promise<void> {
       await db.execute(
         "INSERT INTO loan_payments (id, business_id, loan_id, amount, date, note, created_at) VALUES ($1, $2, $3, $4, $5, $6, $7)",
         [p.id, mapBiz(p.business_id), lid, p.amount, p.date, p.note ?? "", p.created_at]
+      );
+    }
+  }
+  if (Array.isArray(data.donations)) {
+    for (const d of data.donations) {
+      await db.execute(
+        "INSERT INTO donations (id, business_id, donor, amount, date, campaign, created_at) VALUES ($1, $2, $3, $4, $5, $6, $7)",
+        [d.id, mapBiz(d.business_id), d.donor, d.amount, d.date, d.campaign ?? "", d.created_at]
       );
     }
   }

@@ -13,7 +13,9 @@ export type Screen =
   | "settings"
   | "customers"
   | "contractors"
-  | "loans";
+  | "loans"
+  | "donations"
+  | "donors";
 
 export type InvoiceStatus = "waiting" | "paid";
 
@@ -22,11 +24,17 @@ export type Recurrence = "none" | "weekly" | "monthly";
 /** How money moved: cash, card, bank transfer, or paper check. */
 export type PayMethod = "cash" | "card" | "transfer" | "check";
 
+export type EntityType = "forprofit" | "nonprofit";
+
 export interface Business {
   id: number;
   name: string;
-  type: string; // business-type id, selects the category pack
+  type: string; // business-type id, selects the category pack ('nonprofit' for nonprofits)
+  entity_type: EntityType;
   state: string; // US state code, e.g. "IN"
+  ein: string; // nonprofit: Employer Identification Number
+  fiscal_year_end: number; // nonprofit: month (1-12) the fiscal year ends
+  mission: string; // nonprofit: mission statement
   created_at: string;
 }
 
@@ -159,6 +167,17 @@ export interface LoanPayment {
   created_at: string;
 }
 
+/** A donation to a nonprofit organization. */
+export interface Donation {
+  id: number;
+  business_id: number;
+  donor: string;
+  amount: number;
+  date: string; // YYYY-MM-DD
+  campaign: string; // e.g. "Holiday drive 2026" (optional)
+  created_at: string;
+}
+
 export interface BackupData {
   app: "cuentalibre";
   version: 2;
@@ -179,4 +198,5 @@ export interface BackupData {
   trips?: Trip[];
   loans?: Loan[];
   loanPayments?: LoanPayment[];
+  donations?: Donation[];
 }

@@ -3,19 +3,27 @@ import { useLangState } from "../App";
 import { businessTypes } from "../data/categories";
 import { US_STATES } from "../data/us-states";
 import { useLang, useStrings } from "../i18n";
-import type { Lang } from "../types";
+import type { EntityType, Lang } from "../types";
 
 interface Props {
-  onDone: (lang: Lang, businessName: string, bizId: string, stateCode: string) => void;
+  onDone: (
+    lang: Lang,
+    businessName: string,
+    entityType: EntityType,
+    typeId: string,
+    stateCode: string
+  ) => void;
 }
 
 /**
  * First-run setup, in this order:
  *  1. Language — so every later step is already in their words.
- *  2. Business name — shown in the header and on invoices.
- *  3. Business type — loads the right bilingual category pack,
- *     which keeps their books organized long-term.
- *  4. Business state — sets the default sales-tax rate on invoices
+ *  2. Organization kind — for-profit gets trade categories,
+ *     nonprofit gets donation/revenue categories and the 990 helper.
+ *  3. Business name — shown in the header and on invoices/receipts.
+ *  4. Business type — loads the right bilingual category pack
+ *     (for-profits only; nonprofits use the nonprofit pack).
+ *  5. Business state — sets the default sales-tax rate on invoices
  *     (state base rate; the user can override it per invoice).
  */
 export default function Onboarding({ onDone }: Props) {
@@ -23,16 +31,16 @@ export default function Onboarding({ onDone }: Props) {
   const lang = useLang();
   const { lang: cur, setLang } = useLangState();
   const [step, setStep] = useState(0);
+  const [entity, setEntity] = useState<EntityType>("forprofit");
   const [name, setName] = useState("");
   const [selected, setSelected] = useState("restaurant");
   const [stateCode, setStateCode] = useState("");
 
-  const steps = [
-    t.onboarding.langTitle,
-    t.onboarding.nameTitle,
-    t.onboarding.bizTitle,
-    t.onboarding.stateTitle,
-  ];
+  const isNfp = entity === "nonprofit";
+  // Step ids shown as dots: nonprofits skip the trade-type step.
+  const dotSteps = isNfp ? [0, 1, 2, 4] : [0, 1, 2, 3, 4];
+
+  const finish = () => onDone(cur, name.trim(), entity, isNfp ? "nonprofit" : selected, stateCode);
 
   return (
     <div className="onboarding">
@@ -41,7 +49,7 @@ export default function Onboarding({ onDone }: Props) {
       </div>
 
       <div className="steps-dots" aria-hidden="true">
-        {[0, 1, 2, 3].map((i) => (
+        {dotSteps.map((i) => (
           <span key={i} className={i === step ? "active" : i < step ? "done" : ""} />
         ))}
       </div>
@@ -73,6 +81,40 @@ export default function Onboarding({ onDone }: Props) {
 
       {step === 1 && (
         <>
+          <h1>{t.onboarding.entityTitle}</h1>
+          <p className="subtitle">{t.onboarding.entitySub}</p>
+          <div className="lang-pick">
+            {(["forprofit", "nonprofit"] as EntityType[]).map((e) => (
+              <button
+                key={e}
+                type="button"
+                className={`lang-card${entity === e ? " selected" : ""}`}
+                onClick={() => setEntity(e)}
+              >
+                <span className="lang-big">
+                  {e === "forprofit" ? t.onboarding.entityForProfit : t.onboarding.entityNonprofit}
+                </span>
+                <span className="lang-sub">
+                  {e === "forprofit"
+                    ? t.onboarding.entityForProfitDesc
+                    : t.onboarding.entityNonprofitDesc}
+                </span>
+              </button>
+            ))}
+          </div>
+          <div className="wizard-nav">
+            <button type="button" className="btn secondary" onClick={() => setStep(0)}>
+              {t.onboarding.back}
+            </button>
+            <button type="button" className="btn" onClick={() => setStep(2)}>
+              {t.onboarding.next}
+            </button>
+          </div>
+        </>
+      )}
+
+      {step === 2 && (
+        <>
           <h1>{t.onboarding.nameTitle}</h1>
           <p className="subtitle">{t.onboarding.nameSub}</p>
           <div className="field" style={{ maxWidth: 420, margin: "0 auto" }}>
@@ -84,19 +126,19 @@ export default function Onboarding({ onDone }: Props) {
               placeholder={t.onboarding.namePh}
               onChange={(e) => setName(e.target.value)}
               onKeyDown={(e) => {
-                if (e.key === "Enter" && name.trim()) setStep(2);
+                if (e.key === "Enter" && name.trim()) setStep(isNfp ? 4 : 3);
               }}
             />
           </div>
           <div className="wizard-nav">
-            <button type="button" className="btn secondary" onClick={() => setStep(0)}>
+            <button type="button" className="btn secondary" onClick={() => setStep(1)}>
               {t.onboarding.back}
             </button>
             <button
               type="button"
               className="btn"
               disabled={!name.trim()}
-              onClick={() => setStep(2)}
+              onClick={() => setStep(isNfp ? 4 : 3)}
             >
               {t.onboarding.next}
             </button>
@@ -104,9 +146,9 @@ export default function Onboarding({ onDone }: Props) {
         </>
       )}
 
-      {step === 2 && (
+      {step === 3 && !isNfp && (
         <>
-          <h1>{steps[2]}</h1>
+          <h1>{t.onboarding.bizTitle}</h1>
           <p className="subtitle">{t.onboarding.bizSub}</p>
           <div className="biz-grid">
             {businessTypes.map((b) => (
@@ -122,19 +164,19 @@ export default function Onboarding({ onDone }: Props) {
             ))}
           </div>
           <div className="wizard-nav">
-            <button type="button" className="btn secondary" onClick={() => setStep(1)}>
+            <button type="button" className="btn secondary" onClick={() => setStep(2)}>
               {t.onboarding.back}
             </button>
-            <button type="button" className="btn" onClick={() => setStep(3)}>
+            <button type="button" className="btn" onClick={() => setStep(4)}>
               {t.onboarding.next}
             </button>
           </div>
         </>
       )}
 
-      {step === 3 && (
+      {step === 4 && (
         <>
-          <h1>{steps[3]}</h1>
+          <h1>{t.onboarding.stateTitle}</h1>
           <p className="subtitle">{t.onboarding.stateSub}</p>
           <div className="field" style={{ maxWidth: 420, margin: "0 auto" }}>
             <select
@@ -153,14 +195,18 @@ export default function Onboarding({ onDone }: Props) {
             </select>
           </div>
           <div className="wizard-nav">
-            <button type="button" className="btn secondary" onClick={() => setStep(2)}>
+            <button
+              type="button"
+              className="btn secondary"
+              onClick={() => setStep(isNfp ? 2 : 3)}
+            >
               {t.onboarding.back}
             </button>
             <button
               type="button"
               className="btn"
               disabled={!stateCode}
-              onClick={() => onDone(cur, name.trim(), selected, stateCode)}
+              onClick={finish}
             >
               {t.onboarding.start}
             </button>

@@ -11,9 +11,14 @@ import type { Business, Lang } from "../types";
 const APP_VERSION = "0.1.0";
 
 function bizTypeLabel(b: Business, lang: Lang): string {
+  if (b.entity_type === "nonprofit") {
+    return `💝 ${lang === "es" ? "Organización sin fines de lucro" : "Nonprofit organization"}`;
+  }
   const meta = businessTypes.find((x) => x.id === b.type);
   return meta ? `${meta.icon} ${lang === "es" ? meta.es : meta.en}` : b.type;
 }
+
+const MONTH_KEYS = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12];
 
 export default function Settings({ refresh }: { refresh: () => Promise<void> }) {
   const t = useStrings();
@@ -23,7 +28,9 @@ export default function Settings({ refresh }: { refresh: () => Promise<void> }) 
     businesses,
     active,
     activeId,
+    isNonprofit,
     updateActiveBusiness,
+    updateActiveNonprofit,
     deleteActiveBusiness,
     resyncAfterRestore,
   } = useBiz();
@@ -35,6 +42,10 @@ export default function Settings({ refresh }: { refresh: () => Promise<void> }) 
   const [goal, setGoal] = useState("");
   const [taxJar, setTaxJar] = useState("25");
   const [lastBackupAt, setLastBackupAt] = useState<string | null>(null);
+  const [ein, setEin] = useState("");
+  const [fyEnd, setFyEnd] = useState(12);
+  const [mission, setMission] = useState("");
+  const [nfpSaved, setNfpSaved] = useState(false);
 
   useEffect(() => {
     getSetting("remindersOn")
@@ -46,6 +57,33 @@ export default function Settings({ refresh }: { refresh: () => Promise<void> }) 
   useEffect(() => {
     setName(active?.name ?? "");
   }, [activeId, active?.name]);
+
+  // Nonprofit fields, stored per business.
+  useEffect(() => {
+    if (!active) return;
+    setEin(active.ein);
+    setFyEnd(
+      active.fiscal_year_end >= 1 && active.fiscal_year_end <= 12
+        ? active.fiscal_year_end
+        : 12
+    );
+    setMission(active.mission);
+  }, [activeId, active?.ein, active?.fiscal_year_end, active?.mission]);
+
+  const saveNonprofit = async () => {
+    await updateActiveNonprofit({
+      ein: ein.trim(),
+      fiscal_year_end: fyEnd,
+      mission: mission.trim(),
+    });
+    setNfpSaved(true);
+    setTimeout(() => setNfpSaved(false), 2500);
+  };
+
+  const monthName = (m: number) =>
+    new Date(2000, m - 1, 1).toLocaleString(lang === "es" ? "es" : "en", {
+      month: "long",
+    });
 
   // Monthly income goal, stored per business.
   useEffect(() => {
@@ -250,6 +288,15 @@ export default function Settings({ refresh }: { refresh: () => Promise<void> }) 
 
         <div className="settings-row">
           <div>
+            <div className="label">{t.settings.entityType}</div>
+            <div className="desc">
+              {isNonprofit ? t.nonprofit.entityNonprofit : t.nonprofit.entityForProfit}
+            </div>
+          </div>
+        </div>
+
+        <div className="settings-row">
+          <div>
             <div className="label">{t.settings.businessState}</div>
           </div>
           <div className="field" style={{ minWidth: 220 }}>
@@ -266,47 +313,127 @@ export default function Settings({ refresh }: { refresh: () => Promise<void> }) 
           </div>
         </div>
 
-        <div className="settings-row">
-          <div>
-            <div className="label">{t.settings.businessType}</div>
+        {/* Trade type applies to for-profits only — nonprofits use the
+            nonprofit category pack. */}
+        {!isNonprofit && (
+          <div className="settings-row">
+            <div>
+              <div className="label">{t.settings.businessType}</div>
+            </div>
+            <div className="field" style={{ minWidth: 220 }}>
+              <select value={active?.type ?? "freelancer"} onChange={(e) => saveType(e.target.value)}>
+                {businessTypes.map((b) => (
+                  <option key={b.id} value={b.id}>
+                    {b.icon} {lang === "es" ? b.es : b.en}
+                  </option>
+                ))}
+              </select>
+            </div>
           </div>
-          <div className="field" style={{ minWidth: 220 }}>
-            <select value={active?.type ?? "freelancer"} onChange={(e) => saveType(e.target.value)}>
-              {businessTypes.map((b) => (
-                <option key={b.id} value={b.id}>
-                  {b.icon} {lang === "es" ? b.es : b.en}
-                </option>
-              ))}
-            </select>
-          </div>
-        </div>
+        )}
 
-        <div className="settings-row">
-          <div>
-            <div className="label">🎯 {t.settings.incomeGoal}</div>
-          </div>
-          <div className="field" style={{ minWidth: 220 }}>
-            <input
-              type="number"
-              min="0"
-              step="0.01"
-              value={goal}
-              placeholder="0.00"
-              aria-label={t.settings.incomeGoal}
-              onChange={(e) => setGoal(e.target.value)}
-              onBlur={saveGoal}
-              onKeyDown={(e) => {
-                if (e.key === "Enter") (e.target as HTMLInputElement).blur();
-              }}
-            />
-          </div>
-        </div>
+        {isNonprofit && (
+          <>
+            <div className="settings-row">
+              <div>
+                <div className="label">{t.nonprofit.ein}</div>
+                <div className="desc">{t.nonprofit.einDesc}</div>
+              </div>
+              <div className="field" style={{ minWidth: 220 }}>
+                <input
+                  type="text"
+                  value={ein}
+                  maxLength={12}
+                  placeholder="12-3456789"
+                  aria-label={t.nonprofit.ein}
+                  onChange={(e) => setEin(e.target.value)}
+                  onBlur={saveNonprofit}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") (e.target as HTMLInputElement).blur();
+                  }}
+                />
+              </div>
+            </div>
 
-        <div className="settings-row">
-          <div>
-            <div className="label">🏦 {t.settings.taxJarTitle}</div>
-            <div className="desc">{t.settings.taxJarDesc}</div>
+            <div className="settings-row">
+              <div>
+                <div className="label">{t.nonprofit.fiscalYearEnd}</div>
+                <div className="desc">{t.nonprofit.fiscalYearEndDesc}</div>
+              </div>
+              <div className="field" style={{ minWidth: 220 }}>
+                <select
+                  value={fyEnd}
+                  onChange={(e) => {
+                    const m = Number(e.target.value);
+                    setFyEnd(m);
+                    updateActiveNonprofit({
+                      ein: ein.trim(),
+                      fiscal_year_end: m,
+                      mission: mission.trim(),
+                    }).catch(() => undefined);
+                  }}
+                >
+                  {MONTH_KEYS.map((m) => (
+                    <option key={m} value={m}>
+                      {monthName(m)}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            </div>
+
+            <div className="settings-row">
+              <div>
+                <div className="label">{t.nonprofit.mission}</div>
+                <div className="desc">{t.nonprofit.missionDesc}</div>
+              </div>
+              <div className="field" style={{ minWidth: 220 }}>
+                <textarea
+                  value={mission}
+                  rows={3}
+                  maxLength={500}
+                  aria-label={t.nonprofit.mission}
+                  onChange={(e) => setMission(e.target.value)}
+                  onBlur={saveNonprofit}
+                />
+              </div>
+            </div>
+
+            {nfpSaved && <p className="tax-note">✓</p>}
+          </>
+        )}
+
+        {!isNonprofit && (
+          <div className="settings-row">
+            <div>
+              <div className="label">🎯 {t.settings.incomeGoal}</div>
+            </div>
+            <div className="field" style={{ minWidth: 220 }}>
+              <input
+                type="number"
+                min="0"
+                step="0.01"
+                value={goal}
+                placeholder="0.00"
+                aria-label={t.settings.incomeGoal}
+                onChange={(e) => setGoal(e.target.value)}
+                onBlur={saveGoal}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") (e.target as HTMLInputElement).blur();
+                }}
+              />
+            </div>
           </div>
+        )}
+
+        {/* The tax-savings jar is a for-profit tool — nonprofits don't pay
+            income tax on their revenue. */}
+        {!isNonprofit && (
+          <div className="settings-row">
+            <div>
+              <div className="label">🏦 {t.settings.taxJarTitle}</div>
+              <div className="desc">{t.settings.taxJarDesc}</div>
+            </div>
           <div className="field" style={{ minWidth: 220 }}>
             <input
               type="number"
@@ -324,6 +451,7 @@ export default function Settings({ refresh }: { refresh: () => Promise<void> }) 
             />
           </div>
         </div>
+        )}
 
         <ul className="row-list biz-list">
           {businesses.map((b) => (

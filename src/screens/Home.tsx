@@ -3,12 +3,13 @@ import { fmtDate, fmtMoney, todayISO, useLang, useStrings } from "../i18n";
 import { useBiz } from "../App";
 import { saveWork } from "../backup";
 import { getSetting, invoiceTotal } from "../db";
-import type { Bill, Expense, Invoice, Screen } from "../types";
+import type { Bill, Donation, Expense, Invoice, Screen } from "../types";
 
 interface Props {
   invoices: Invoice[];
   expenses: Expense[];
   bills: Bill[];
+  donations: Donation[];
   go: (s: Screen) => void;
 }
 
@@ -365,22 +366,25 @@ function BackupNudge() {
   );
 }
 
-/** Friendly "tax savings jar": set aside a % of this month's paid income. */
+/** Friendly "tax savings jar": set aside a % of this month's paid income.
+ *  For-profits only — nonprofits don't pay income tax on their revenue. */
 function TaxJarCard({ invoices }: { invoices: Invoice[] }) {
   const t = useStrings();
   const lang = useLang();
-  const { activeId } = useBiz();
+  const { activeId, isNonprofit } = useBiz();
   const [pct, setPct] = useState(25);
 
   useEffect(() => {
-    if (activeId == null) return;
+    if (activeId == null || isNonprofit) return;
     getSetting(`taxJarPercent:${activeId}`)
       .then((v) => {
         const n = v ? parseFloat(v) : NaN;
         setPct(!Number.isNaN(n) && n >= 0 && n <= 100 ? n : 25);
       })
       .catch(() => setPct(25));
-  }, [activeId]);
+  }, [activeId, isNonprofit]);
+
+  if (isNonprofit) return null;
 
   const mk = monthKey(0);
   const income = invoices
@@ -487,9 +491,85 @@ function YoYCard({ invoices, expenses }: { invoices: Invoice[]; expenses: Expens
   );
 }
 
-export default function Home({ invoices, expenses, bills, go }: Props) {
+/** 990 filing deadline: 15th day of the 5th month after the fiscal year ends. */
+export function nfpDeadlineDate(fiscalYearEnd: number, taxYear: number): string {
+  let m = fiscalYearEnd + 5;
+  let y = taxYear;
+  if (m > 12) {
+    m -= 12;
+    y += 1;
+  }
+  return `${y}-${String(m).padStart(2, "0")}-15`;
+}
+
+/** Nonprofit: donations received this month. */
+function DonationsMonthCard({ donations, go }: { donations: Donation[]; go: (s: Screen) => void }) {
   const t = useStrings();
   const lang = useLang();
+  const mk = monthKey(0);
+  const inMonth = donations.filter((d) => d.date.startsWith(mk));
+  const total = inMonth.reduce((s, d) => s + d.amount, 0);
+
+  return (
+    <div className="panel">
+      <div className="toolbar">
+        <h2 style={{ margin: 0 }}>❤️ {t.home.donationsMonth}</h2>
+        <button type="button" className="btn small" onClick={() => go("donations")}>
+          {t.donations.new}
+        </button>
+      </div>
+      {inMonth.length === 0 ? (
+        <p className="empty-note">{t.home.noDonations}</p>
+      ) : (
+        <p style={{ margin: "4px 0 0" }}>
+          <strong>{fmtMoney(total, lang)}</strong>{" "}
+          <span className="row-sub">
+            {t.home.donationsCount.replace("{n}", String(inMonth.length))}
+          </span>
+        </p>
+      )}
+    </div>
+  );
+}
+
+/** Nonprofit: 990 deadline reminder, replacing the quarterly tax card. */
+function NfpDeadlineCard() {
+  const t = useStrings();
+  const lang = useLang();
+  const { active } = useBiz();
+  const today = todayISO();
+  const fyEnd = active?.fiscal_year_end && active.fiscal_year_end >= 1 && active.fiscal_year_end <= 12
+    ? active.fiscal_year_end
+    : 12;
+
+  let taxYear = Number(today.slice(0, 4));
+  let deadline = nfpDeadlineDate(fyEnd, taxYear);
+  if (deadline < today) {
+    taxYear += 1;
+    deadline = nfpDeadlineDate(fyEnd, taxYear);
+  }
+
+  return (
+    <div className="panel tax-reminder">
+      <h2 style={{ marginTop: 0 }}>🏛️ {t.home.nfpDeadlineTitle}</h2>
+      <p style={{ margin: "4px 0" }}>
+        <strong>
+          {t.home.nfpDeadlineLine
+            .replace("{year}", String(taxYear))
+            .replace("{date}", fmtDate(deadline, lang))}
+        </strong>
+      </p>
+      <p className="tax-note" style={{ margin: 0 }}>
+        {t.home.nfpDeadlineSub}
+      </p>
+    </div>
+  );
+}
+
+export default function Home({ invoices, expenses, bills, donations, go }: Props) {
+  const t = useStrings();
+  const lang = useLang();
+  const { isNonprofit } = useBiz();
   const today = todayISO();
 
   const moneyIn = invoices
@@ -540,19 +620,25 @@ export default function Home({ invoices, expenses, bills, go }: Props) {
 
       <TaxJarCard invoices={invoices} />
 
+      {isNonprofit && <DonationsMonthCard donations={donations} go={go} />}
+
       <YoYCard invoices={invoices} expenses={expenses} />
 
-      <div className="panel tax-reminder">
-        <h2 style={{ marginTop: 0 }}>🧾 {t.home.taxTitle}</h2>
-        <p style={{ margin: "4px 0" }}>
-          <strong>
-            {t.home.taxNext}: {fmtDate(nextQuarterlyDue(), lang)}
-          </strong>
-        </p>
-        <p className="tax-note" style={{ margin: 0 }}>
-          {t.home.taxSub}
-        </p>
-      </div>
+      {isNonprofit ? (
+        <NfpDeadlineCard />
+      ) : (
+        <div className="panel tax-reminder">
+          <h2 style={{ marginTop: 0 }}>🧾 {t.home.taxTitle}</h2>
+          <p style={{ margin: "4px 0" }}>
+            <strong>
+              {t.home.taxNext}: {fmtDate(nextQuarterlyDue(), lang)}
+            </strong>
+          </p>
+          <p className="tax-note" style={{ margin: 0 }}>
+            {t.home.taxSub}
+          </p>
+        </div>
+      )}
 
       <div className="panel">
         <h2 style={{ marginTop: 0 }}>📈 {t.home.cashflowTitle}</h2>
