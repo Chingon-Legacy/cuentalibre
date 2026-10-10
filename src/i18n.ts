@@ -73,6 +73,8 @@ const en = {
     start: "Start using CuentaLibre",
     celebrateTitle: "You're all set!",
     celebrateSub: "Let's take care of your business money.",
+    setupFailed: "Something went wrong while saving your setup. Nothing was lost — please try again.",
+    tryAgain: "Try again",
   },
 
   home: {
@@ -269,6 +271,7 @@ const en = {
     markAccepted: "Mark accepted",
     markDeclined: "Mark declined",
     convert: "Convert to invoice",
+    confirmConvert: "Turn this quote into an invoice?",
     converted: "Quote converted to a new invoice.",
     empty: "No quotes yet. Send one to win the next job.",
     emptyTitle: "Quotes win jobs",
@@ -304,6 +307,7 @@ const en = {
     noPayments: "No payments logged yet — add the first one above.",
     year: "Year",
     totalYear: "Total paid",
+    ofThreshold: "of",
     exportCsv: "Download summary",
     banner:
       "The IRS requires a 1099-NEC form for any contractor paid $600 or more in a year.",
@@ -328,6 +332,8 @@ const en = {
     skipped: "skipped (already imported or invalid)",
     done: "Done!",
     noRows: "No valid rows found in this file.",
+    checkSign:
+      "Nothing imported? Check the “spending as negative numbers” box above — it should match how your bank writes amounts.",
     dateNote: "Dates like MM/DD/YYYY are read as month/day/year.",
     preview: "Preview",
   },
@@ -926,7 +932,7 @@ const en = {
       "If you don't file for 3 years in a row, the IRS automatically cancels your tax-exempt status. Filing every year keeps you safe.",
     checklistTitle: "Your 990-N checklist",
     checklistSub:
-      "The online form asks these 8 questions. What we know is filled in — the rest is marked TO FILL.",
+      "The online form asks these 8 questions. What we know is filled in — the rest is marked Needed.",
     cEin: "EIN",
     cTaxYear: "Tax year",
     cLegalName: "Legal name",
@@ -1030,6 +1036,8 @@ const es: typeof en = {
     start: "Empezar a usar CuentaLibre",
     celebrateTitle: "¡Todo listo!",
     celebrateSub: "Cuidemos el dinero de tu negocio.",
+    setupFailed: "Algo salió mal al guardar tu configuración. No se perdió nada — intenta de nuevo.",
+    tryAgain: "Intentar de nuevo",
   },
 
   home: {
@@ -1226,6 +1234,7 @@ const es: typeof en = {
     markAccepted: "Marcar aceptada",
     markDeclined: "Marcar rechazada",
     convert: "Convertir en factura",
+    confirmConvert: "¿Convertir esta cotización en factura?",
     converted: "Cotización convertida en una nueva factura.",
     empty: "Aún no hay cotizaciones. Envía una para ganar el próximo trabajo.",
     emptyTitle: "Las cotizaciones ganan trabajos",
@@ -1261,6 +1270,7 @@ const es: typeof en = {
     noPayments: "Aún no hay pagos — agrega el primero arriba.",
     year: "Año",
     totalYear: "Total pagado",
+    ofThreshold: "de",
     exportCsv: "Descargar resumen",
     banner:
       "El IRS exige el formulario 1099-NEC para cualquier contratista al que le pagues $600 o más en un año.",
@@ -1285,6 +1295,8 @@ const es: typeof en = {
     skipped: "omitidos (ya importados o inválidos)",
     done: "¡Listo!",
     noRows: "No se encontraron filas válidas en este archivo.",
+    checkSign:
+      "¿No se importó nada? Revisa la casilla «gastos como números negativos» de arriba — debe coincidir con cómo tu banco escribe las cantidades.",
     dateNote: "Las fechas como MM/DD/AAAA se leen como mes/día/año.",
     preview: "Vista previa",
   },
@@ -1883,7 +1895,7 @@ const es: typeof en = {
       "Si no presentas el reporte por 3 años seguidos, el IRS cancela automáticamente tu exención de impuestos. Presentarlo cada año te mantiene a salvo.",
     checklistTitle: "Tu lista para el 990-N",
     checklistSub:
-      "El formulario en línea hace estas 8 preguntas. Lo que sabemos ya está lleno — lo demás está marcado POR COMPLETAR.",
+      "El formulario en línea hace estas 8 preguntas. Lo que sabemos ya está lleno — lo demás está marcado Falta.",
     cEin: "EIN",
     cTaxYear: "Año fiscal",
     cLegalName: "Nombre legal",

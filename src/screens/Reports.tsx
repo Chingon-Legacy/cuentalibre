@@ -389,13 +389,14 @@ export default function Reports({ invoices, expenses, bills, contractors, contra
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [bills, from, to]
   );
-  const waitingInRange = useMemo(
+  // "Who owes me" is a snapshot of what's currently owed — not date-range
+  // filtered, since it's about outstanding balances, not a time period.
+  const waitingNow = useMemo(
     () =>
       invoices
-        .filter((i) => i.status === "waiting" && inRange(i.due_date))
+        .filter((i) => i.status === "waiting")
         .sort((a, b) => a.due_date.localeCompare(b.due_date)),
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    [invoices, from, to]
+    [invoices]
   );
 
   const catLabel = (id: string) => {
@@ -594,7 +595,7 @@ export default function Reports({ invoices, expenses, bills, contractors, contra
       rows = expensesByCat.map(([c, a]) => [catLabel(c), money(a)]);
     } else if (report === "owes") {
       headers = [t.reports.customer, t.reports.amount, t.reports.dueDate, t.reports.status];
-      rows = waitingInRange.map((i) => [i.customer, money(i.amount), i.due_date, t.reports.waiting]);
+      rows = waitingNow.map((i) => [i.customer, money(invoiceTotal(i)), i.due_date, t.reports.waiting]);
     } else if (report === "tax") {
       headers = [t.reports.category, t.reports.amount];
       rows = [
@@ -788,7 +789,7 @@ export default function Reports({ invoices, expenses, bills, contractors, contra
         : report === "expenses"
           ? expensesByCat.length > 0
           : report === "owes"
-            ? waitingInRange.length > 0
+            ? waitingNow.length > 0
             : report === "tax"
               ? incomeInRange.length > 0 || expInRange.length > 0
               : report === "taxguide"
@@ -824,14 +825,19 @@ export default function Reports({ invoices, expenses, bills, contractors, contra
               ))}
             </select>
           </div>
+          {/* "Who owes me" is a current snapshot — no date range applies. */}
+          {report !== "owes" && (
           <div className="field">
             <label>{t.reports.from}</label>
             <input type="date" value={from} onChange={(e) => setFrom(e.target.value)} />
           </div>
+          )}
+          {report !== "owes" && (
           <div className="field">
             <label>{t.reports.to}</label>
             <input type="date" value={to} onChange={(e) => setTo(e.target.value)} />
           </div>
+          )}
           <div className="field">
             <button type="button" className="btn secondary" onClick={download}>
               ⬇ {t.reports.download}
@@ -937,17 +943,17 @@ export default function Reports({ invoices, expenses, bills, contractors, contra
               </tr>
             </thead>
             <tbody>
-              {waitingInRange.map((i) => (
+              {waitingNow.map((i) => (
                 <tr key={i.id}>
                   <td>{i.customer}</td>
-                  <td className="num">{fmtMoney(i.amount, lang)}</td>
+                  <td className="num">{fmtMoney(invoiceTotal(i), lang)}</td>
                   <td>{fmtDate(i.due_date, lang)}</td>
                 </tr>
               ))}
               <tr className="total">
                 <td>{t.reports.amount}</td>
                 <td className="num">
-                  {fmtMoney(waitingInRange.reduce((s, i) => s + i.amount, 0), lang)}
+                  {fmtMoney(waitingNow.reduce((s, i) => s + invoiceTotal(i), 0), lang)}
                 </td>
                 <td />
               </tr>

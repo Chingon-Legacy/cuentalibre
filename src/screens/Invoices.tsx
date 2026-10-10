@@ -534,7 +534,7 @@ export default function Invoices({ invoices, services, refresh }: Props) {
             onAction={startCreate}
           />
         ) : (
-          <ul className="row-list">
+          <ul className="row-list invoice-list">
             {filtered.map((inv) => (
               <li key={inv.id}>
                 <div className="row-main">

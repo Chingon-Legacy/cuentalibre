@@ -13,7 +13,7 @@ interface Props {
     entityType: EntityType,
     typeId: string,
     stateCode: string
-  ) => void;
+  ) => Promise<void>;
 }
 
 /**
@@ -37,17 +37,26 @@ export default function Onboarding({ onDone }: Props) {
   const [selected, setSelected] = useState("restaurant");
   const [stateCode, setStateCode] = useState("");
   const [celebrating, setCelebrating] = useState(false);
+  const [setupError, setSetupError] = useState(false);
 
   const isNfp = entity === "nonprofit";
   // Step ids shown as dots: nonprofits skip the trade-type step.
   const dotSteps = isNfp ? [0, 1, 2, 4] : [0, 1, 2, 3, 4];
 
   // Final "Start" tap: celebrate briefly, then hand off to the app.
+  // If saving the setup fails, come back with a friendly retry
+  // instead of hanging on the celebration forever.
   const finish = () => {
     if (celebrating) return;
     setCelebrating(true);
-    setTimeout(() => {
-      onDone(cur, name.trim(), entity, isNfp ? "nonprofit" : selected, stateCode);
+    setSetupError(false);
+    setTimeout(async () => {
+      try {
+        await onDone(cur, name.trim(), entity, isNfp ? "nonprofit" : selected, stateCode);
+      } catch {
+        setCelebrating(false);
+        setSetupError(true);
+      }
     }, 1600);
   };
 
@@ -236,6 +245,17 @@ export default function Onboarding({ onDone }: Props) {
               onClick={finish}
             >
               {t.onboarding.start}
+            </button>
+          </div>
+        </div>
+      )}
+
+      {setupError && !celebrating && (
+        <div className="panel" role="alert">
+          <p className="status-note">⚠️ {t.onboarding.setupFailed}</p>
+          <div className="form-actions" style={{ justifyContent: "center" }}>
+            <button type="button" className="btn" onClick={finish}>
+              {t.onboarding.tryAgain}
             </button>
           </div>
         </div>

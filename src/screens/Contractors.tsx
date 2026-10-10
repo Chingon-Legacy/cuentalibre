@@ -206,7 +206,8 @@ export default function Contractors({ contractors, payments, refresh }: Props) {
                     <div className="row-main">
                       <div className="row-title">{c.name}</div>
                       <div className="row-sub">
-                        {t.contractors.totalYear} {year}: {fmtMoney(total, lang)}
+                        {t.contractors.totalYear} {year}: {fmtMoney(total, lang)}{" "}
+                        {t.contractors.ofThreshold} {fmtMoney(NEC_THRESHOLD, lang)}
                         {over && (
                           <span className="badge late" style={{ marginLeft: 8 }}>
                             {t.contractors.overThreshold}

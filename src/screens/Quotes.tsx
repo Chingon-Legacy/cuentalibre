@@ -92,6 +92,7 @@ export default function Quotes({ quotes, services, refresh }: Props) {
   };
 
   const convertToInvoice = async (q: Quote) => {
+    if (!window.confirm(t.quotes.confirmConvert)) return;
     const info = getStateInfo(stateCode);
     await addInvoice({
       customer: q.customer,
@@ -251,7 +252,7 @@ export default function Quotes({ quotes, services, refresh }: Props) {
                     </button>
                   </>
                 )}
-                {q.status === "accepted" && (
+                {(q.status === "sent" || q.status === "accepted") && (
                   <button
                     type="button"
                     className="btn small"

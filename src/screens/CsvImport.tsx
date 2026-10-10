@@ -49,7 +49,7 @@ export default function CsvImport({ expenses, onDone, onClose }: Props) {
   const [colDate, setColDate] = useState(-1);
   const [colDesc, setColDesc] = useState(-1);
   const [colAmount, setColAmount] = useState(-1);
-  const [spendingNegative, setSpendingNegative] = useState(true);
+  const [spendingNegative, setSpendingNegative] = useState(false);
   const [category, setCategory] = useState(pack.expense[0]?.id ?? "other");
   const [importing, setImporting] = useState(false);
   const [result, setResult] = useState<{ imported: number; skipped: number } | null>(null);
@@ -232,6 +232,9 @@ export default function CsvImport({ expenses, onDone, onClose }: Props) {
             {t.csvimport.done} {result.imported} {t.csvimport.imported},{" "}
             {result.skipped} {t.csvimport.skipped}
           </p>
+          {result.imported === 0 && (
+            <p className="tax-note">💡 {t.csvimport.checkSign}</p>
+          )}
           <div className="form-actions">
             <button type="button" className="btn" onClick={onClose}>
               OK

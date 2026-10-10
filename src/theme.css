@@ -128,7 +128,8 @@ body {
   color: #fff;
   font-weight: 700;
   font-size: 13px;
-  padding: 5px 12px;
+  padding: 5px 14px;
+  min-height: 44px;
   border-radius: 999px;
   cursor: pointer;
 }
@@ -596,7 +597,7 @@ body {
 .btn.small {
   font-size: 13px;
   padding: 7px 12px;
-  min-height: 34px;
+  min-height: 44px;
 }
 
 .btn:disabled {
@@ -933,6 +934,28 @@ table.report th.num {
 
   .mobile-nav {
     display: flex !important;
+  }
+
+  /* Invoices: rows become stacked cards on small screens so the row never
+     overflows the viewport (and overflowing rows can't intercept taps on
+     the fixed bottom nav). */
+  .invoice-list li {
+    flex-wrap: wrap;
+    row-gap: 8px;
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 10px 12px;
+    margin-bottom: 10px;
+  }
+
+  .invoice-list li:last-child {
+    border-bottom: 1px solid var(--border);
+  }
+
+  .invoice-list .row-main {
+    flex: 1 1 100%;
+    min-width: 0;
   }
 }
 
@@ -1343,8 +1366,8 @@ table.report th.num {
 }
 
 .help-btn {
-  width: 32px;
-  height: 32px;
+  width: 44px;
+  height: 44px;
   border-radius: 50%;
   border: 2px solid rgba(255, 255, 255, 0.75);
   background: transparent;

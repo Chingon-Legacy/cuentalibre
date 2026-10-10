@@ -44,15 +44,74 @@ export async function saveWork(): Promise<boolean> {
     purchaseOrders: all.purchaseOrders,
   };
   const today = new Date().toISOString().slice(0, 10);
-  const path = await save({
-    defaultPath: `cuentalibre-backup-${today}.json`,
-    filters: [{ name: "CuentaLibre backup", extensions: ["json"] }],
-  });
-  if (!path) return false;
-  await writeTextFile(path, JSON.stringify(data, null, 2));
+  const filename = `cuentalibre-backup-${today}.json`;
+  const text = JSON.stringify(data, null, 2);
+  try {
+    const path = await save({
+      defaultPath: filename,
+      filters: [{ name: "CuentaLibre backup", extensions: ["json"] }],
+    });
+    if (!path) return false;
+    await writeTextFile(path, text);
+  } catch {
+    // Not running inside Tauri (or the dialog failed) — download the
+    // backup as a file in the browser instead of throwing.
+    downloadBlob(filename, text, "application/json;charset=utf-8");
+  }
   // Remember when the last successful backup happened (drives the Home nudge).
   await setSetting("lastBackupAt", new Date().toISOString()).catch(() => undefined);
   return true;
+}
+
+/** Plain browser download via a temporary anchor element. */
+function downloadBlob(filename: string, text: string, mime: string): void {
+  const blob = new Blob([text], { type: mime });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+}
+
+/** Hidden file picker used when the Tauri native dialog is unavailable. */
+function pickBackupFile(): Promise<string | null> {
+  return new Promise((resolve) => {
+    const input = document.createElement("input");
+    input.type = "file";
+    input.accept = ".json,application/json";
+    input.style.position = "fixed";
+    input.style.opacity = "0";
+    input.style.pointerEvents = "none";
+    let settled = false;
+    const done = (value: string | null) => {
+      if (settled) return;
+      settled = true;
+      if (input.parentNode) document.body.removeChild(input);
+      resolve(value);
+    };
+    input.onchange = () => {
+      const f = input.files?.[0];
+      if (!f) return done(null);
+      const reader = new FileReader();
+      reader.onload = () => done(String(reader.result ?? ""));
+      reader.onerror = () => done(null);
+      reader.readAsText(f);
+    };
+    // Closing the picker without choosing fires no event — treat
+    // regained focus without a file as cancellation.
+    const onFocus = () => {
+      window.removeEventListener("focus", onFocus);
+      setTimeout(() => {
+        if (!input.files?.length) done(null);
+      }, 300);
+    };
+    window.addEventListener("focus", onFocus);
+    document.body.appendChild(input);
+    input.click();
+  });
 }
 
 export type OpenBackupResult = "ok" | "cancelled" | "invalid";
@@ -62,12 +121,19 @@ export type OpenBackupResult = "ok" | "cancelled" | "invalid";
  * (via the native open dialog). Replaces current data.
  */
 export async function openBackup(): Promise<OpenBackupResult> {
-  const path = await open({
-    filters: [{ name: "CuentaLibre backup", extensions: ["json"] }],
-    multiple: false,
-  });
-  if (!path) return "cancelled";
-  const text = await readTextFile(path as string);
+  let text: string | null = null;
+  try {
+    const path = await open({
+      filters: [{ name: "CuentaLibre backup", extensions: ["json"] }],
+      multiple: false,
+    });
+    if (!path) return "cancelled";
+    text = await readTextFile(path as string);
+  } catch {
+    // Not running inside Tauri — fall back to a hidden file picker.
+    text = await pickBackupFile();
+    if (text === null) return "cancelled";
+  }
   let data: BackupData;
   try {
     data = JSON.parse(text) as BackupData;
