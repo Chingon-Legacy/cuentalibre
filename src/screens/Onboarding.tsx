@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useLangState } from "../App";
+import "../onboarding-polish.css";
 import { businessTypes } from "../data/categories";
 import { US_STATES } from "../data/us-states";
 import { useLang, useStrings } from "../i18n";
@@ -35,12 +36,20 @@ export default function Onboarding({ onDone }: Props) {
   const [name, setName] = useState("");
   const [selected, setSelected] = useState("restaurant");
   const [stateCode, setStateCode] = useState("");
+  const [celebrating, setCelebrating] = useState(false);
 
   const isNfp = entity === "nonprofit";
   // Step ids shown as dots: nonprofits skip the trade-type step.
   const dotSteps = isNfp ? [0, 1, 2, 4] : [0, 1, 2, 3, 4];
 
-  const finish = () => onDone(cur, name.trim(), entity, isNfp ? "nonprofit" : selected, stateCode);
+  // Final "Start" tap: celebrate briefly, then hand off to the app.
+  const finish = () => {
+    if (celebrating) return;
+    setCelebrating(true);
+    setTimeout(() => {
+      onDone(cur, name.trim(), entity, isNfp ? "nonprofit" : selected, stateCode);
+    }, 1600);
+  };
 
   return (
     <div className="onboarding">
@@ -55,7 +64,7 @@ export default function Onboarding({ onDone }: Props) {
       </div>
 
       {step === 0 && (
-        <>
+        <div className="onboard-step" key="step-0">
           <h1>{t.onboarding.langTitle}</h1>
           <p className="subtitle">{t.onboarding.langSub}</p>
           <div className="lang-pick">
@@ -76,11 +85,11 @@ export default function Onboarding({ onDone }: Props) {
           <button type="button" className="btn" onClick={() => setStep(1)}>
             {t.onboarding.next}
           </button>
-        </>
+        </div>
       )}
 
       {step === 1 && (
-        <>
+        <div className="onboard-step" key="step-1">
           <h1>{t.onboarding.entityTitle}</h1>
           <p className="subtitle">{t.onboarding.entitySub}</p>
           <div className="lang-pick">
@@ -110,11 +119,11 @@ export default function Onboarding({ onDone }: Props) {
               {t.onboarding.next}
             </button>
           </div>
-        </>
+        </div>
       )}
 
       {step === 2 && (
-        <>
+        <div className="onboard-step" key="step-2">
           <h1>{t.onboarding.nameTitle}</h1>
           <p className="subtitle">{t.onboarding.nameSub}</p>
           <div className="field" style={{ maxWidth: 420, margin: "0 auto" }}>
@@ -143,11 +152,11 @@ export default function Onboarding({ onDone }: Props) {
               {t.onboarding.next}
             </button>
           </div>
-        </>
+        </div>
       )}
 
       {step === 3 && !isNfp && (
-        <>
+        <div className="onboard-step" key="step-3">
           <h1>{t.onboarding.bizTitle}</h1>
           <p className="subtitle">{t.onboarding.bizSub}</p>
           <div className="biz-grid">
@@ -171,11 +180,11 @@ export default function Onboarding({ onDone }: Props) {
               {t.onboarding.next}
             </button>
           </div>
-        </>
+        </div>
       )}
 
       {step === 4 && (
-        <>
+        <div className="onboard-step" key="step-4">
           <h1>{t.onboarding.stateTitle}</h1>
           <p className="subtitle">{t.onboarding.stateSub}</p>
           <div className="field" style={{ maxWidth: 420, margin: "0 auto" }}>
@@ -211,7 +220,19 @@ export default function Onboarding({ onDone }: Props) {
               {t.onboarding.start}
             </button>
           </div>
-        </>
+        </div>
+      )}
+
+      {celebrating && (
+        <div className="onboard-celebrate" role="status" aria-live="polite">
+          <div className="celebrate-card">
+            <div className="celebrate-emoji" aria-hidden="true">
+              🎉
+            </div>
+            <h1>{t.onboarding.celebrateTitle}</h1>
+            <p>{t.onboarding.celebrateSub}</p>
+          </div>
+        </div>
       )}
     </div>
   );

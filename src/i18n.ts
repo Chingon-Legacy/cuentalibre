@@ -26,30 +26,47 @@ const en = {
     donors: "Donors",
     reports: "Reports",
     settings: "Settings",
+    more: "More",
+  },
+
+  /** One warm line per screen inside the "More" menu. */
+  moreDesc: {
+    quotes: "Price estimates you can send to customers",
+    bills: "What you owe, and when it's due",
+    customers: "Everyone you've billed",
+    donors: "Everyone who gave to your mission",
+    contractors: "People who do work for you",
+    time: "Hours you can turn into invoices",
+    mileage: "Trips that can lower your taxes",
+    services: "Your price list, ready to add to invoices",
+    loans: "What you've borrowed and paid back",
+    settings: "Language, backups, and your business details",
   },
 
   onboarding: {
     langTitle: "Choose your language",
-    langSub: "You can change this anytime in Settings.",
+    langSub: "Welcome! Pick the language you think in — you can change it anytime in Settings.",
     entityTitle: "What kind of organization is this?",
-    entitySub: "This decides which tools and categories you get. You can't change it later.",
+    entitySub: "This picks the tools and categories that fit you best. You can't change it later, so choose with care.",
     entityForProfit: "For-profit business",
     entityForProfitDesc: "A shop, service, or company that earns money.",
     entityNonprofit: "Nonprofit organization",
     entityNonprofitDesc: "A charity or community organization with a mission.",
     nameTitle: "What's your business called?",
-    nameSub: "This appears at the top of your app and on your invoices.",
+    nameSub: "It shows at the top of your app and on your invoices.",
     namePh: "Business name",
     bizTitle: "What kind of business do you have?",
     bizSub:
-      "We'll set up the right money categories for you. You can change this later in Settings.",
+      "We'll pick the money categories that fit your kind of work. You can change them later in Settings.",
     stateTitle: "What state is your business in?",
     stateSub:
-      "We'll use your state's base sales tax rate on your invoices. You can change it later in Settings.",
+      "We'll put your state's base sales tax rate on your invoices. You can change it later in Settings.",
     statePh: "Choose your state…",
     back: "Back",
     next: "Continue",
     start: "Start using CuentaLibre",
+    celebrateTitle: "You're all set!",
+    celebrateSub: "Let's take care of your business money.",
   },
 
   home: {
@@ -451,6 +468,9 @@ const en = {
     contractorsT: "🤝 Contractors",
     contractorsB:
       "People you pay to help with your business go here. CuentaLibre tracks what you paid each person, and flags anyone over $600 a year — that's when the IRS wants a 1099-NEC form.",
+    loansT: "🏦 Loans",
+    loansB:
+      "Track money you borrowed — a truck loan, a line of credit, anything. Log each payment and watch the balance shrink, with a little cheer when you pay one off.",
     reportsT: "📊 Reports",
     reportsB:
       "Reports turn your numbers into summaries you can download: money in vs money out, spending by category, and a plain-words tax guide. The tax package button builds one file your tax preparer will love.",
@@ -469,6 +489,15 @@ const en = {
     nfpT: "What is Form 990?",
     nfpB:
       "Most nonprofits must tell the IRS about their finances every year using Form 990. Small ones (under $50,000) file a short free form online. The Reports screen figures out which one you need and prepares your numbers — but only the IRS website can accept the filing.",
+  },
+
+  hints: {
+    reports:
+      "Reports turn your money in and out into simple summaries you can download — pick a report type and a date range, and we'll do the math.",
+    csvImport:
+      "Bring in your bank transactions in 3 easy steps: pick your CSV file, match its columns, and review before you import.",
+    nineNinety:
+      "This helper figures out which Form 990 your nonprofit needs and gathers your numbers for you — the filing itself happens on the IRS website.",
   },
 
   reminders: {
@@ -826,13 +855,28 @@ const es: typeof en = {
     donors: "Donantes",
     reports: "Reportes",
     settings: "Ajustes",
+    more: "Más",
+  },
+
+  /** One warm line per screen inside the "More" menu. */
+  moreDesc: {
+    quotes: "Estimados de precio para tus clientes",
+    bills: "Lo que debes y cuándo vence",
+    customers: "Todos a quienes has facturado",
+    donors: "Todos los que apoyaron tu misión",
+    contractors: "Personas que trabajan para ti",
+    time: "Horas que puedes convertir en facturas",
+    mileage: "Viajes que pueden bajar tus impuestos",
+    services: "Tu lista de precios, lista para facturar",
+    loans: "Lo que pediste prestado y devolviste",
+    settings: "Idioma, respaldos y datos de tu negocio",
   },
 
   onboarding: {
     langTitle: "Elige tu idioma",
-    langSub: "Puedes cambiarlo cuando quieras en Ajustes.",
+    langSub: "¡Bienvenido/a! Elige el idioma en el que piensas — puedes cambiarlo cuando quieras en Ajustes.",
     entityTitle: "¿Qué tipo de organización es?",
-    entitySub: "Esto decide qué herramientas y categorías recibes. No podrás cambiarlo después.",
+    entitySub: "Esto elige las herramientas y categorías que más te convienen. No podrás cambiarlo después, así que elige con calma.",
     entityForProfit: "Negocio con fines de lucro",
     entityForProfitDesc: "Una tienda, servicio o empresa que gana dinero.",
     entityNonprofit: "Organización sin fines de lucro",
@@ -842,14 +886,16 @@ const es: typeof en = {
     namePh: "Nombre del negocio",
     bizTitle: "¿Qué tipo de negocio tienes?",
     bizSub:
-      "Prepararemos las categorías adecuadas para ti. Puedes cambiarlo después en Ajustes.",
+      "Elegiremos las categorías que se adapten a tu tipo de trabajo. Puedes cambiarlas después en Ajustes.",
     stateTitle: "¿En qué estado está tu negocio?",
     stateSub:
-      "Usaremos la tasa base de impuesto sobre las ventas de tu estado en tus facturas. Puedes cambiarla después en Ajustes.",
+      "Pondremos la tasa base de impuesto sobre las ventas de tu estado en tus facturas. Puedes cambiarla después en Ajustes.",
     statePh: "Elige tu estado…",
     back: "Atrás",
     next: "Continuar",
     start: "Empezar a usar CuentaLibre",
+    celebrateTitle: "¡Todo listo!",
+    celebrateSub: "Cuidemos el dinero de tu negocio.",
   },
 
   home: {
@@ -1251,6 +1297,9 @@ const es: typeof en = {
     contractorsT: "🤝 Contratistas",
     contractorsB:
       "Las personas a las que les pagas por ayudarte con tu negocio van aquí. CuentaLibre registra lo que le pagaste a cada uno, y marca a quienes superen $600 al año — ahí es cuando el IRS pide el formulario 1099-NEC.",
+    loansT: "🏦 Préstamos",
+    loansB:
+      "Registra el dinero que pediste prestado — un préstamo para la camioneta, una línea de crédito, lo que sea. Anota cada pago y mira cómo baja el saldo, con una pequeña celebración cuando termines de pagarlo.",
     reportsT: "📊 Reportes",
     reportsB:
       "Los reportes convierten tus números en resúmenes descargables: entradas vs salidas, gastos por categoría y una guía de impuestos en palabras simples. El botón del paquete de impuestos crea un archivo que a tu preparador le encantará.",
@@ -1269,6 +1318,15 @@ const es: typeof en = {
     nfpT: "¿Qué es el Formulario 990?",
     nfpB:
       "La mayoría de las organizaciones sin fines de lucro deben informar sus finanzas al IRS cada año con el Formulario 990. Las pequeñas (menos de $50,000) presentan un formulario corto y gratis en línea. La pantalla de Reportes descubre cuál necesitas y prepara tus números — pero solo el sitio web del IRS puede aceptar la presentación.",
+  },
+
+  hints: {
+    reports:
+      "Los reportes convierten tus entradas y salidas en resúmenes simples que puedes descargar — elige un tipo de reporte y un rango de fechas, y hacemos los cálculos.",
+    csvImport:
+      "Trae tus movimientos del banco en 3 pasos fáciles: elige tu archivo CSV, relaciona sus columnas y revisa antes de importar.",
+    nineNinety:
+      "Este asistente descubre qué Formulario 990 necesita tu organización y prepara tus números — la presentación se hace en el sitio web del IRS.",
   },
 
   reminders: {

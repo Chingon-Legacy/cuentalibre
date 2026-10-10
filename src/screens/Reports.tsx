@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { useBiz } from "../App";
+import HintBar from "../components/HintBar";
 import { downloadCsv, downloadText, toCsv } from "../backup";
 import { invoiceTotal } from "../db";
 import { businessTypes } from "../data/categories";
@@ -173,6 +174,7 @@ function NfpAnnualReport({
     <div className="panel">
       <h2 style={{ marginTop: 0 }}>🏛️ {t.nfp.title}</h2>
       <p className="subtitle">{t.nfp.desc}</p>
+      <HintBar id="nineNinety" text={t.hints.nineNinety} />
 
       <div className="report-controls">
         <div className="field">
@@ -238,6 +240,7 @@ function NfpAnnualReport({
         <>
           <h3 style={{ marginTop: 24 }}>{t.nfp.checklistTitle}</h3>
           <p className="subtitle">{t.nfp.checklistSub}</p>
+          <div className="table-scroll">
           <table className="report">
             <tbody>
               {checklist.map((c) => (
@@ -254,6 +257,7 @@ function NfpAnnualReport({
               ))}
             </tbody>
           </table>
+          </div>
 
           <h3 style={{ marginTop: 24 }}>{t.nfp.howTitle}</h3>
           <p className="subtitle">{t.nfp.howSub}</p>
@@ -276,6 +280,7 @@ function NfpAnnualReport({
               <strong>{t.nonprofit.mission}:</strong> {active.mission}
             </p>
           )}
+          <div className="table-scroll">
           <table className="report">
             <thead>
               <tr>
@@ -320,6 +325,7 @@ function NfpAnnualReport({
               </tr>
             </tbody>
           </table>
+          </div>
           <div className="field" style={{ marginTop: 12 }}>
             <button type="button" className="btn secondary" onClick={downloadSummary}>
               ⬇ {t.nfp.download}
@@ -647,7 +653,7 @@ export default function Reports({ invoices, expenses, contractors, contractorPay
     } else {
       for (const i of unpaidEnd) {
         L.push(
-          `- #${i.number || "—"} · ${i.customer}: ${fmtMoney(invoiceTotal(i), lang)} (${t.reports.dueDate}: ${i.due_date})`
+          `- #${i.number || "—"} · ${i.customer}: ${fmtMoney(invoiceTotal(i), lang)} (${t.reports.dueDate}: ${fmtDate(i.due_date, lang)})`
         );
       }
     }
@@ -695,6 +701,7 @@ export default function Reports({ invoices, expenses, contractors, contractorPay
     <div className="page">
       <h1>📊 {t.reports.title}</h1>
       <p className="subtitle">{t.reports.type}</p>
+      <HintBar id="reports" text={t.hints.reports} />
 
       {isNonprofit && (
         <NfpAnnualReport
@@ -736,6 +743,7 @@ export default function Reports({ invoices, expenses, contractors, contractorPay
           <p className="empty-note">{t.reports.noData}</p>
         ) : report === "summary" ? (
           <>
+            <div className="table-scroll">
             <table className="report">
               <thead>
                 <tr>
@@ -758,9 +766,11 @@ export default function Reports({ invoices, expenses, contractors, contractorPay
                 </tr>
               </tbody>
             </table>
+            </div>
             {(inByMethod.length > 1 || outByMethod.length > 1) && (
               <>
                 <h3 style={{ marginTop: 24 }}>💳 {t.paymethod.breakdown}</h3>
+                <div className="table-scroll">
                 <table className="report">
                   <tbody>
                     {inByMethod.map(([m, a]) => (
@@ -781,10 +791,12 @@ export default function Reports({ invoices, expenses, contractors, contractorPay
                     ))}
                   </tbody>
                 </table>
+                </div>
               </>
             )}
           </>
         ) : report === "income" || report === "expenses" ? (
+          <div className="table-scroll">
           <table className="report">
             <thead>
               <tr>
@@ -813,7 +825,9 @@ export default function Reports({ invoices, expenses, contractors, contractorPay
               </tr>
             </tbody>
           </table>
+          </div>
         ) : report === "owes" ? (
+          <div className="table-scroll">
           <table className="report">
             <thead>
               <tr>
@@ -839,9 +853,11 @@ export default function Reports({ invoices, expenses, contractors, contractorPay
               </tr>
             </tbody>
           </table>
+          </div>
         ) : report === "tax" ? (
           <>
             <p className="subtitle">💡 {t.reports.taxNote}</p>
+            <div className="table-scroll">
             <table className="report">
               <thead>
                 <tr>
@@ -880,6 +896,7 @@ export default function Reports({ invoices, expenses, contractors, contractorPay
                 </tr>
               </tbody>
             </table>
+            </div>
           </>
         ) : report === "taxguide" ? (
           <>
@@ -898,6 +915,7 @@ export default function Reports({ invoices, expenses, contractors, contractorPay
               </div>
               <p className="tax-why">{t.reports.taxExpensesWhy}</p>
               {expensesByCat.length > 0 && (
+                <div className="table-scroll">
                 <table className="report">
                   <thead>
                     <tr>
@@ -914,6 +932,7 @@ export default function Reports({ invoices, expenses, contractors, contractorPay
                     ))}
                   </tbody>
                 </table>
+                </div>
               )}
             </div>
             <div className="tax-block">
@@ -932,6 +951,7 @@ export default function Reports({ invoices, expenses, contractors, contractorPay
             <p className="disclaimer">{t.reports.disclaimer}</p>
           </>
         ) : (
+          <div className="table-scroll">
           <table className="report">
             <thead>
               <tr>
@@ -952,6 +972,7 @@ export default function Reports({ invoices, expenses, contractors, contractorPay
               ))}
             </tbody>
           </table>
+          </div>
         )}
       </div>
 

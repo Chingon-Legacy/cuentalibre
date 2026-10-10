@@ -17,8 +17,12 @@ export default function HelpPanel({ onClose }: { onClose: () => void }) {
     { title: t.help.mileageT, body: t.help.mileageB },
     { title: t.help.customersT, body: t.help.customersB },
     { title: t.help.contractorsT, body: t.help.contractorsB },
+    { title: t.help.loansT, body: t.help.loansB },
+    { title: t.help.donationsT, body: t.help.donationsB },
+    { title: t.help.donorsT, body: t.help.donorsB },
     { title: t.help.reportsT, body: t.help.reportsB },
     { title: t.help.taxT, body: t.help.taxB },
+    { title: t.help.nfpT, body: t.help.nfpB },
     { title: t.help.backupT, body: t.help.backupB },
   ];
 

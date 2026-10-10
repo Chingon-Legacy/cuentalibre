@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { open } from "@tauri-apps/plugin-dialog";
 import { readTextFile } from "@tauri-apps/plugin-fs";
 import { useBiz } from "../App";
+import HintBar from "../components/HintBar";
 import { addExpense } from "../db";
 import { isTauri } from "../photos";
 import { daysBetween, normStr } from "../dupes";
@@ -13,7 +14,7 @@ import {
   parseCsvAmount,
   parseCsvDate,
 } from "../csv";
-import { fmtMoney, useLang, useStrings } from "../i18n";
+import { fmtDate, fmtMoney, useLang, useStrings } from "../i18n";
 import type { Expense } from "../types";
 
 interface Props {
@@ -223,6 +224,7 @@ export default function CsvImport({ expenses, onDone, onClose }: Props) {
   return (
     <div className="panel">
       <h2 style={{ marginTop: 0 }}>🏦 {t.csvimport.title}</h2>
+      <HintBar id="csvImport" text={t.hints.csvImport} />
 
       {result ? (
         <>
@@ -365,10 +367,10 @@ export default function CsvImport({ expenses, onDone, onClose }: Props) {
                             </span>
                           )}
                         </div>
-                        <div className="row-sub">{p.date}</div>
+                        <div className="row-sub">{fmtDate(p.date, lang)}</div>
                       </div>
                       <span className="row-amount negative">
-                        -{fmtMoney(Math.abs(p.amount), lang)}
+                        {fmtMoney(-p.amount, lang)}
                       </span>
                     </li>
                   );
