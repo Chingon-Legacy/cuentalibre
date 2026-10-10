@@ -54,7 +54,25 @@ export default function Onboarding({ onDone }: Props) {
   return (
     <div className="onboarding">
       <div className="brand-row">
-        <span className="brand-mark">CL</span> CuentaLibre
+        <span className="brand-left">
+          <span className="brand-mark">CL</span> CuentaLibre
+        </span>
+        <div
+          className="lang-toggle on-light"
+          role="group"
+          aria-label="Language / Idioma"
+        >
+          {(["en", "es"] as Lang[]).map((l) => (
+            <button
+              key={l}
+              type="button"
+              className={cur === l ? "active" : ""}
+              onClick={() => setLang(l)}
+            >
+              {l.toUpperCase()}
+            </button>
+          ))}
+        </div>
       </div>
 
       <div className="steps-dots" aria-hidden="true">

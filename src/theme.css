@@ -138,6 +138,20 @@ body {
   color: var(--blue);
 }
 
+/* Light-background variant (onboarding, dialogs). */
+.lang-toggle.on-light {
+  background: rgba(24, 119, 242, 0.12);
+}
+
+.lang-toggle.on-light button {
+  color: var(--blue);
+}
+
+.lang-toggle.on-light button.active {
+  background: var(--blue);
+  color: #fff;
+}
+
 /* ---------- more menu (nav polish) ---------- */
 
 .more-wrap {
@@ -716,7 +730,7 @@ table.report th.num {
 .onboarding .brand-row {
   display: flex;
   align-items: center;
-  justify-content: center;
+  justify-content: space-between;
   gap: 10px;
   margin-bottom: 28px;
   color: var(--blue);
