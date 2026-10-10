@@ -1,11 +1,12 @@
 import { useMemo } from "react";
 import { fmtDate, fmtMoney, todayISO, useLang, useStrings } from "../i18n";
 import { invoiceTotal } from "../db";
-import type { Expense, Invoice, Screen } from "../types";
+import type { Bill, Expense, Invoice, Screen } from "../types";
 
 interface Props {
   invoices: Invoice[];
   expenses: Expense[];
+  bills: Bill[];
   go: (s: Screen) => void;
 }
 
@@ -142,7 +143,7 @@ function nextQuarterlyDue(): string {
   return `${y + 1}-01-15`;
 }
 
-export default function Home({ invoices, expenses, go }: Props) {
+export default function Home({ invoices, expenses, bills, go }: Props) {
   const t = useStrings();
   const lang = useLang();
   const today = todayISO();
@@ -156,6 +157,12 @@ export default function Home({ invoices, expenses, go }: Props) {
   const unpaid = invoices
     .filter((i) => i.status === "waiting")
     .sort((a, b) => a.due_date.localeCompare(b.due_date));
+
+  const unpaidBills = bills
+    .filter((b) => b.status === "unpaid")
+    .sort((a, b) => a.due_date.localeCompare(b.due_date));
+
+  const totalOwed = unpaidBills.reduce((s, b) => s + b.amount, 0);
 
   const recent = [...expenses]
     .sort((a, b) => b.date.localeCompare(a.date))
@@ -230,6 +237,45 @@ export default function Home({ invoices, expenses, go }: Props) {
                 );
               })}
             </ul>
+          )}
+        </div>
+
+        <div className="panel">
+          <div className="toolbar">
+            <h2 style={{ margin: 0 }}>📄 {t.home.billsDue}</h2>
+            <button type="button" className="btn small" onClick={() => go("bills")}>
+              {t.bills.new}
+            </button>
+          </div>
+          {unpaidBills.length === 0 ? (
+            <p className="empty-note">{t.home.noBillsDue}</p>
+          ) : (
+            <>
+              <p className="row-sub" style={{ margin: "0 0 8px" }}>
+                {t.home.totalOwed}: <strong>{fmtMoney(totalOwed, lang)}</strong>
+              </p>
+              <ul className="row-list">
+                {unpaidBills.slice(0, 5).map((b) => {
+                  const late = b.due_date < today;
+                  return (
+                    <li key={b.id}>
+                      <div className="row-main">
+                        <div className="row-title">{b.payee}</div>
+                        <div className="row-sub">
+                          {t.home.due} {fmtDate(b.due_date, lang)}
+                        </div>
+                      </div>
+                      <span className={`badge${late ? " late" : " waiting"}`}>
+                        {late ? t.bills.overdue : t.bills.unpaid}
+                      </span>
+                      <span className="row-amount negative">
+                        {fmtMoney(b.amount, lang)}
+                      </span>
+                    </li>
+                  );
+                })}
+              </ul>
+            </>
           )}
         </div>
 

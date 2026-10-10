@@ -1,6 +1,15 @@
 export type Lang = "en" | "es";
 
-export type Screen = "home" | "invoices" | "expenses" | "reports" | "settings" | "customers";
+export type Screen =
+  | "home"
+  | "invoices"
+  | "quotes"
+  | "bills"
+  | "expenses"
+  | "reports"
+  | "settings"
+  | "customers"
+  | "contractors";
 
 export type InvoiceStatus = "waiting" | "paid";
 
@@ -27,6 +36,48 @@ export interface Expense {
   amount: number;
   category: string;
   date: string; // YYYY-MM-DD
+  photo: string | null; // stored filename under app-data receipts/ or a data: URL (browser fallback)
+  created_at: string;
+}
+
+export type BillStatus = "unpaid" | "paid";
+
+export interface Bill {
+  id: number;
+  payee: string;
+  amount: number;
+  category: string;
+  due_date: string; // YYYY-MM-DD
+  status: BillStatus;
+  created_at: string;
+}
+
+export type QuoteStatus = "draft" | "sent" | "accepted" | "declined";
+
+export interface Quote {
+  id: number;
+  number: string; // sequential, e.g. "0001"
+  customer: string;
+  amount: number;
+  category: string;
+  valid_until: string; // YYYY-MM-DD
+  status: QuoteStatus;
+  created_at: string;
+}
+
+export interface Contractor {
+  id: number;
+  name: string;
+  note: string;
+  created_at: string;
+}
+
+export interface ContractorPayment {
+  id: number;
+  contractor_id: number;
+  amount: number;
+  date: string; // YYYY-MM-DD
+  note: string;
   created_at: string;
 }
 
@@ -39,4 +90,8 @@ export interface BackupData {
   businessState: string;
   invoices: Invoice[];
   expenses: Expense[];
+  bills?: Bill[];
+  quotes?: Quote[];
+  contractors?: Contractor[];
+  contractorPayments?: ContractorPayment[];
 }

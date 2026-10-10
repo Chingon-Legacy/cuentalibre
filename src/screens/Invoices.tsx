@@ -124,6 +124,7 @@ export default function Invoices({ invoices, refresh }: Props) {
   const t = useStrings();
   const lang = useLang();
   const { pack, stateCode } = useBiz();
+  const { bizName } = useBizName();
   const [showForm, setShowForm] = useState(false);
   const [editing, setEditing] = useState<Invoice | null>(null);
   const [viewing, setViewing] = useState<Invoice | null>(null);
@@ -225,6 +226,17 @@ export default function Invoices({ invoices, refresh }: Props) {
   const markPaid = async (id: number) => {
     await setInvoiceStatus(id, "paid");
     await refresh();
+  };
+
+  /** Open WhatsApp (web or app) with a polite, pre-written payment reminder. */
+  const remind = (inv: Invoice) => {
+    const msg = t.invoices.remindMsg
+      .replace("{customer}", inv.customer)
+      .replace("{biz}", bizName || "CuentaLibre")
+      .replace("{number}", inv.number || "—")
+      .replace("{amount}", fmtMoney(invoiceTotal(inv), lang))
+      .replace("{date}", fmtDate(inv.due_date, lang));
+    window.open(`https://wa.me/?text=${encodeURIComponent(msg)}`, "_blank", "noopener");
   };
 
   const remove = async (id: number) => {
@@ -436,6 +448,16 @@ export default function Invoices({ invoices, refresh }: Props) {
                     onClick={() => markPaid(inv.id)}
                   >
                     {t.invoices.markPaid}
+                  </button>
+                )}
+                {inv.status === "waiting" && (
+                  <button
+                    type="button"
+                    className="btn small secondary"
+                    onClick={() => remind(inv)}
+                    title={t.invoices.remind}
+                  >
+                    💬 {t.invoices.remind}
                   </button>
                 )}
                 <button

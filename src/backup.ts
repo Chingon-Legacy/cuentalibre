@@ -1,6 +1,15 @@
 import { open, save } from "@tauri-apps/plugin-dialog";
 import { readTextFile, writeTextFile } from "@tauri-apps/plugin-fs";
-import { getExpenses, getInvoices, getSetting, importBackup } from "./db";
+import {
+  getBills,
+  getContractorPayments,
+  getContractors,
+  getExpenses,
+  getInvoices,
+  getQuotes,
+  getSetting,
+  importBackup,
+} from "./db";
 import type { BackupData } from "./types";
 
 /**
@@ -18,6 +27,10 @@ export async function saveWork(): Promise<boolean> {
     businessState: (await getSetting("businessState")) ?? "",
     invoices: await getInvoices(),
     expenses: await getExpenses(),
+    bills: await getBills(),
+    quotes: await getQuotes(),
+    contractors: await getContractors(),
+    contractorPayments: await getContractorPayments(),
   };
   const today = new Date().toISOString().slice(0, 10);
   const path = await save({

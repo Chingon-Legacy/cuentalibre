@@ -84,6 +84,12 @@ body {
   gap: 4px;
   margin-left: 12px;
   flex: 1;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+
+.main-nav::-webkit-scrollbar {
+  display: none;
 }
 
 .nav-btn {
@@ -652,16 +658,23 @@ table.report th.num {
   border-top: 1px solid var(--border);
   padding: 6px 4px calc(6px + env(safe-area-inset-bottom));
   z-index: 10;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+
+.mobile-nav::-webkit-scrollbar {
+  display: none;
 }
 
 .mobile-nav button {
-  flex: 1;
+  flex: 0 0 auto;
+  min-width: 64px;
   background: none;
   border: none;
   font-size: 11px;
   font-weight: 700;
   color: var(--ink-faint);
-  padding: 6px 2px;
+  padding: 6px 6px;
   cursor: pointer;
   display: flex;
   flex-direction: column;
@@ -988,4 +1001,46 @@ table.report th.num {
   .no-print {
     display: none !important;
   }
+}
+
+/* ---------- receipt photos ---------- */
+
+.receipt-thumb {
+  width: 48px;
+  height: 48px;
+  object-fit: cover;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  cursor: zoom-in;
+  flex-shrink: 0;
+}
+
+.receipt-preview {
+  width: 120px;
+  height: 120px;
+  object-fit: cover;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+}
+
+.receipt-full {
+  width: 100%;
+  max-height: 70vh;
+  object-fit: contain;
+  border-radius: 8px;
+  margin-bottom: 12px;
+}
+
+.photo-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+/* ---------- selectable rows (contractors) ---------- */
+
+.row-list li.selected-row {
+  border-color: var(--blue);
+  background: var(--blue-light);
 }

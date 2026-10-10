@@ -7,15 +7,38 @@ import {
   useState,
 } from "react";
 import { LangProvider, useStrings, type Strings } from "./i18n";
-import { getExpenses, getInvoices, getSetting, initDb, setSetting, generateRecurringInvoices } from "./db";
+import {
+  getBills,
+  getContractorPayments,
+  getContractors,
+  getExpenses,
+  getInvoices,
+  getQuotes,
+  getSetting,
+  initDb,
+  setSetting,
+  generateRecurringInvoices,
+} from "./db";
 import { getPack } from "./data/categories";
 import type { CategoryPack } from "./data/categories/types";
-import type { Expense, Invoice, Lang, Screen } from "./types";
+import type {
+  Bill,
+  Contractor,
+  ContractorPayment,
+  Expense,
+  Invoice,
+  Lang,
+  Quote,
+  Screen,
+} from "./types";
 import Onboarding from "./screens/Onboarding";
 import Home from "./screens/Home";
 import Invoices from "./screens/Invoices";
+import Quotes from "./screens/Quotes";
+import Bills from "./screens/Bills";
 import Expenses from "./screens/Expenses";
 import Customers from "./screens/Customers";
+import Contractors from "./screens/Contractors";
 import Reports from "./screens/Reports";
 import Settings from "./screens/Settings";
 
@@ -74,8 +97,11 @@ export function useBizName(): BizNameState {
 const NAV_ITEMS: { id: Screen; icon: string; label: (t: Strings) => string }[] = [
   { id: "home", icon: "🏠", label: (t) => t.nav.home },
   { id: "invoices", icon: "🧾", label: (t) => t.nav.invoices },
+  { id: "quotes", icon: "📝", label: (t) => t.nav.quotes },
+  { id: "bills", icon: "📄", label: (t) => t.nav.bills },
   { id: "expenses", icon: "💸", label: (t) => t.nav.expenses },
   { id: "customers", icon: "👥", label: (t) => t.nav.customers },
+  { id: "contractors", icon: "🤝", label: (t) => t.nav.contractors },
   { id: "reports", icon: "📊", label: (t) => t.nav.reports },
   { id: "settings", icon: "⚙️", label: (t) => t.nav.settings },
 ];
@@ -104,12 +130,27 @@ function Shell({ setBiz }: { setBiz: (id: string) => void }) {
   const [screen, setScreen] = useState<Screen>("home");
   const [invoices, setInvoices] = useState<Invoice[]>([]);
   const [expenses, setExpenses] = useState<Expense[]>([]);
+  const [bills, setBills] = useState<Bill[]>([]);
+  const [quotes, setQuotes] = useState<Quote[]>([]);
+  const [contractors, setContractors] = useState<Contractor[]>([]);
+  const [contractorPayments, setContractorPayments] = useState<ContractorPayment[]>([]);
   const [ready, setReady] = useState(false);
 
   const refresh = useCallback(async () => {
-    const [inv, exp] = await Promise.all([getInvoices(), getExpenses()]);
+    const [inv, exp, bl, qu, co, cp] = await Promise.all([
+      getInvoices(),
+      getExpenses(),
+      getBills(),
+      getQuotes(),
+      getContractors(),
+      getContractorPayments(),
+    ]);
     setInvoices(inv);
     setExpenses(exp);
+    setBills(bl);
+    setQuotes(qu);
+    setContractors(co);
+    setContractorPayments(cp);
   }, []);
 
   useEffect(() => {
@@ -160,15 +201,28 @@ function Shell({ setBiz }: { setBiz: (id: string) => void }) {
 
       <main>
         {ready && screen === "home" && (
-          <Home invoices={invoices} expenses={expenses} go={setScreen} />
+          <Home invoices={invoices} expenses={expenses} bills={bills} go={setScreen} />
         )}
         {ready && screen === "invoices" && (
           <Invoices invoices={invoices} refresh={refresh} />
+        )}
+        {ready && screen === "quotes" && (
+          <Quotes quotes={quotes} refresh={refresh} />
+        )}
+        {ready && screen === "bills" && (
+          <Bills bills={bills} refresh={refresh} />
         )}
         {ready && screen === "expenses" && (
           <Expenses expenses={expenses} refresh={refresh} />
         )}
         {ready && screen === "customers" && <Customers invoices={invoices} />}
+        {ready && screen === "contractors" && (
+          <Contractors
+            contractors={contractors}
+            payments={contractorPayments}
+            refresh={refresh}
+          />
+        )}
         {ready && screen === "reports" && (
           <Reports invoices={invoices} expenses={expenses} />
         )}

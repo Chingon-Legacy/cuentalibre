@@ -1,12 +1,54 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useBiz } from "../App";
-import { addExpense, deleteExpense, updateExpense } from "../db";
+import { addExpense, deleteExpense, setExpensePhoto, updateExpense } from "../db";
+import {
+  deleteReceiptPhoto,
+  fileToDownscaledDataUrl,
+  isTauri,
+  pickImageBytes,
+  receiptPhotoUrl,
+  saveReceiptPhoto,
+  type PickedImage,
+} from "../photos";
 import { fmtDate, fmtMoney, todayISO, useLang, useStrings } from "../i18n";
 import type { Expense } from "../types";
+import CsvImport from "./CsvImport";
 
 interface Props {
   expenses: Expense[];
   refresh: () => Promise<void>;
+}
+
+/** Resolves a stored photo value to a displayable thumbnail. */
+function PhotoThumb({
+  stored,
+  onOpen,
+}: {
+  stored: string | null;
+  onOpen: (url: string) => void;
+}) {
+  const [url, setUrl] = useState<string | null>(null);
+  useEffect(() => {
+    let live = true;
+    receiptPhotoUrl(stored).then((u) => {
+      if (live) setUrl(u);
+    });
+    return () => {
+      live = false;
+    };
+  }, [stored]);
+  if (!url) return null;
+  return (
+    <img
+      src={url}
+      className="receipt-thumb"
+      alt=""
+      onClick={(e) => {
+        e.stopPropagation();
+        onOpen(url);
+      }}
+    />
+  );
 }
 
 export default function Expenses({ expenses, refresh }: Props) {
@@ -14,6 +56,7 @@ export default function Expenses({ expenses, refresh }: Props) {
   const lang = useLang();
   const { pack } = useBiz();
   const [showForm, setShowForm] = useState(false);
+  const [showImport, setShowImport] = useState(false);
   const [editing, setEditing] = useState<Expense | null>(null);
   const [description, setDescription] = useState("");
   const [amount, setAmount] = useState("");
@@ -21,10 +64,26 @@ export default function Expenses({ expenses, refresh }: Props) {
   const [date, setDate] = useState(todayISO());
   const [search, setSearch] = useState("");
   const [catFilter, setCatFilter] = useState("all");
+  // Receipt photo state.
+  const [photoCurrent, setPhotoCurrent] = useState<string | null>(null);
+  const [photoNew, setPhotoNew] = useState<PickedImage | null>(null);
+  const [photoNewUrl, setPhotoNewUrl] = useState<string | null>(null);
+  const [photoPreview, setPhotoPreview] = useState<string | null>(null);
+  const [photoCleared, setPhotoCleared] = useState(false);
+  const [viewingPhoto, setViewingPhoto] = useState<string | null>(null);
+  const browserFileInput = useRef<HTMLInputElement>(null);
 
   const catLabel = (id: string) => {
     const c = pack.expense.find((x) => x.id === id);
     return c ? (lang === "es" ? c.es : c.en) : t.expenses.other;
+  };
+
+  const resetPhoto = () => {
+    setPhotoCurrent(null);
+    setPhotoNew(null);
+    setPhotoNewUrl(null);
+    setPhotoPreview(null);
+    setPhotoCleared(false);
   };
 
   const reset = () => {
@@ -34,6 +93,7 @@ export default function Expenses({ expenses, refresh }: Props) {
     setDate(todayISO());
     setEditing(null);
     setShowForm(false);
+    resetPhoto();
   };
 
   const startCreate = () => {
@@ -42,6 +102,7 @@ export default function Expenses({ expenses, refresh }: Props) {
     setCategory(pack.expense[0]?.id ?? "other");
     setDate(todayISO());
     setEditing(null);
+    resetPhoto();
     setShowForm(true);
   };
 
@@ -51,7 +112,46 @@ export default function Expenses({ expenses, refresh }: Props) {
     setCategory(e.category);
     setDate(e.date);
     setEditing(e);
+    setPhotoCurrent(e.photo);
+    setPhotoNew(null);
+    setPhotoNewUrl(null);
+    setPhotoCleared(false);
+    setPhotoPreview(null);
+    if (e.photo) receiptPhotoUrl(e.photo).then(setPhotoPreview);
     setShowForm(true);
+  };
+
+  const attachPhoto = async () => {
+    if (isTauri()) {
+      const img = await pickImageBytes();
+      if (!img) return;
+      setPhotoNew(img);
+      setPhotoNewUrl(null);
+      setPhotoCleared(false);
+      setPhotoPreview(URL.createObjectURL(new Blob([img.bytes as BlobPart])));
+    } else {
+      browserFileInput.current?.click();
+    }
+  };
+
+  const onBrowserPhoto = async (f: File | undefined) => {
+    if (!f) return;
+    try {
+      const url = await fileToDownscaledDataUrl(f);
+      setPhotoNewUrl(url);
+      setPhotoNew(null);
+      setPhotoCleared(false);
+      setPhotoPreview(url);
+    } catch {
+      // Ignore unreadable files.
+    }
+  };
+
+  const clearPhoto = () => {
+    setPhotoNew(null);
+    setPhotoNewUrl(null);
+    setPhotoPreview(null);
+    setPhotoCleared(true);
   };
 
   const save = async () => {
@@ -59,27 +159,46 @@ export default function Expenses({ expenses, refresh }: Props) {
     if (!description.trim() || Number.isNaN(value) || value <= 0) return;
     const rounded = Math.round(value * 100) / 100;
     if (editing) {
+      let finalPhoto = photoCurrent;
+      if (photoCleared) {
+        await deleteReceiptPhoto(photoCurrent);
+        finalPhoto = null;
+      } else if (photoNew || photoNewUrl) {
+        await deleteReceiptPhoto(photoCurrent);
+        if (isTauri() && photoNew) {
+          finalPhoto = await saveReceiptPhoto(editing.id, photoNew);
+        } else if (photoNewUrl) {
+          finalPhoto = photoNewUrl;
+        }
+      }
       await updateExpense(editing.id, {
         description: description.trim(),
         amount: rounded,
         category,
         date,
+        photo: finalPhoto,
       });
     } else {
-      await addExpense({
+      const id = await addExpense({
         description: description.trim(),
         amount: rounded,
         category,
         date,
       });
+      if (isTauri() && photoNew) {
+        await setExpensePhoto(id, await saveReceiptPhoto(id, photoNew));
+      } else if (photoNewUrl) {
+        await setExpensePhoto(id, photoNewUrl);
+      }
     }
     reset();
     await refresh();
   };
 
-  const remove = async (id: number) => {
+  const remove = async (e: Expense) => {
     if (!window.confirm(t.expenses.confirmDelete)) return;
-    await deleteExpense(id);
+    await deleteReceiptPhoto(e.photo);
+    await deleteExpense(e.id);
     await refresh();
   };
 
@@ -98,10 +217,30 @@ export default function Expenses({ expenses, refresh }: Props) {
         <div>
           <h1 style={{ margin: 0 }}>💸 {t.expenses.title}</h1>
         </div>
-        <button type="button" className="btn" onClick={startCreate}>
-          {t.expenses.add}
-        </button>
+        <div style={{ display: "flex", gap: 8 }}>
+          <button
+            type="button"
+            className="btn secondary"
+            onClick={() => {
+              setShowImport(!showImport);
+              setShowForm(false);
+            }}
+          >
+            🏦 {t.expenses.importCsv}
+          </button>
+          <button type="button" className="btn" onClick={startCreate}>
+            {t.expenses.add}
+          </button>
+        </div>
       </div>
+
+      {showImport && (
+        <CsvImport
+          expenses={expenses}
+          onDone={refresh}
+          onClose={() => setShowImport(false)}
+        />
+      )}
 
       {showForm && (
         <div className="panel">
@@ -145,6 +284,45 @@ export default function Expenses({ expenses, refresh }: Props) {
                   </option>
                 ))}
               </select>
+            </div>
+            <div className="field full">
+              <label>{t.expenses.receiptPhoto}</label>
+              {photoPreview ? (
+                <div className="photo-row">
+                  <img src={photoPreview} className="receipt-preview" alt="" />
+                  <div style={{ display: "flex", gap: 8 }}>
+                    <button
+                      type="button"
+                      className="btn small secondary"
+                      onClick={attachPhoto}
+                    >
+                      {t.expenses.changePhoto}
+                    </button>
+                    <button
+                      type="button"
+                      className="btn small danger-ghost"
+                      onClick={clearPhoto}
+                    >
+                      {t.expenses.removePhoto}
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                <button
+                  type="button"
+                  className="btn secondary"
+                  onClick={attachPhoto}
+                >
+                  📷 {t.expenses.attachPhoto}
+                </button>
+              )}
+              <input
+                ref={browserFileInput}
+                type="file"
+                accept="image/*"
+                style={{ display: "none" }}
+                onChange={(e) => onBrowserPhoto(e.target.files?.[0])}
+              />
             </div>
           </div>
           <div className="form-actions">
@@ -190,6 +368,7 @@ export default function Expenses({ expenses, refresh }: Props) {
           <ul className="row-list">
             {filtered.map((e) => (
               <li key={e.id}>
+                {e.photo && <PhotoThumb stored={e.photo} onOpen={setViewingPhoto} />}
                 <div className="row-main">
                   <div className="row-title">{e.description}</div>
                   <div className="row-sub">
@@ -207,7 +386,7 @@ export default function Expenses({ expenses, refresh }: Props) {
                 <button
                   type="button"
                   className="btn danger-ghost small"
-                  onClick={() => remove(e.id)}
+                  onClick={() => remove(e)}
                 >
                   {t.expenses.delete}
                 </button>
@@ -216,6 +395,23 @@ export default function Expenses({ expenses, refresh }: Props) {
           </ul>
         )}
       </div>
+
+      {viewingPhoto && (
+        <div className="modal-overlay" onClick={() => setViewingPhoto(null)}>
+          <div className="modal" onClick={(e) => e.stopPropagation()}>
+            <img src={viewingPhoto} className="receipt-full" alt="" />
+            <div className="form-actions">
+              <button
+                type="button"
+                className="btn secondary"
+                onClick={() => setViewingPhoto(null)}
+              >
+                {t.expenses.cancel}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
