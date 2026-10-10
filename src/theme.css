@@ -680,3 +680,255 @@ table.report th.num {
 .page {
   padding-bottom: 96px;
 }
+
+/* ---------- filter bar (search + filters) ---------- */
+
+.filter-bar {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  margin-bottom: 16px;
+}
+
+/* ---------- modal ---------- */
+
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.45);
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  padding: 40px 16px;
+  z-index: 50;
+  overflow-y: auto;
+}
+
+.modal {
+  background: var(--card);
+  border-radius: var(--radius);
+  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.25);
+  max-width: 680px;
+  width: 100%;
+}
+
+/* ---------- printable invoice ---------- */
+
+.invoice-paper {
+  padding: 36px;
+}
+
+.invoice-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 28px;
+  padding-bottom: 20px;
+  border-bottom: 3px solid var(--blue);
+}
+
+.invoice-biz {
+  font-size: 26px;
+  font-weight: 800;
+  color: var(--blue);
+}
+
+.invoice-sub {
+  font-size: 13px;
+  color: var(--ink-faint);
+  margin-top: 2px;
+}
+
+.invoice-num .label,
+.invoice-meta .label {
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: var(--ink-faint);
+  margin-bottom: 2px;
+}
+
+.invoice-num {
+  text-align: right;
+}
+
+.invoice-num .value {
+  font-size: 30px;
+  font-weight: 800;
+}
+
+.invoice-meta {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  gap: 16px;
+  margin-bottom: 28px;
+}
+
+.invoice-meta .value {
+  font-size: 16px;
+  font-weight: 600;
+}
+
+.invoice-table {
+  margin-bottom: 28px;
+}
+
+/* ---------- customers ---------- */
+
+.row-list li.stacked {
+  display: block;
+}
+
+.row-line {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+}
+
+.sub-list {
+  list-style: none;
+  margin: 12px 0 4px;
+  padding: 0 0 0 12px;
+  border-left: 3px solid var(--blue-light);
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.sub-list li {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 14px;
+  padding: 0;
+  border: none;
+}
+
+/* ---------- cash-flow chart ---------- */
+
+.chart-legend {
+  display: flex;
+  gap: 20px;
+  margin-bottom: 8px;
+  font-size: 14px;
+  color: var(--ink-soft);
+}
+
+.swatch {
+  display: inline-block;
+  width: 12px;
+  height: 12px;
+  border-radius: 3px;
+  margin-right: 6px;
+}
+
+.swatch.in {
+  background: var(--green);
+}
+
+.swatch.out {
+  background: var(--red);
+}
+
+.cashflow-chart {
+  width: 100%;
+  height: auto;
+}
+
+.cashflow-chart .gridline {
+  stroke: var(--border);
+  stroke-width: 1;
+}
+
+.cashflow-chart .bar-in {
+  fill: var(--green);
+}
+
+.cashflow-chart .bar-out {
+  fill: var(--red);
+}
+
+.cashflow-chart .chart-month {
+  font-size: 13px;
+  fill: var(--ink-soft);
+  text-transform: capitalize;
+}
+
+.cashflow-chart .chart-net {
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.cashflow-chart .chart-net.pos {
+  fill: var(--green);
+}
+
+.cashflow-chart .chart-net.neg {
+  fill: var(--red);
+}
+
+/* ---------- tax guide ---------- */
+
+.tax-block {
+  background: var(--bg);
+  border-radius: var(--radius);
+  padding: 16px 20px;
+  margin-bottom: 16px;
+}
+
+.tax-line {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 12px;
+}
+
+.tax-name {
+  font-size: 17px;
+  font-weight: 700;
+}
+
+.tax-amount {
+  font-size: 20px;
+  font-weight: 800;
+  color: var(--blue);
+  white-space: nowrap;
+}
+
+.tax-why {
+  margin: 8px 0 0;
+  color: var(--ink-soft);
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+/* ---------- print: only the invoice paper ---------- */
+
+@media print {
+  body * {
+    visibility: hidden;
+  }
+  .print-sheet,
+  .print-sheet * {
+    visibility: visible;
+  }
+  .print-sheet {
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 100%;
+    max-width: none;
+    box-shadow: none;
+  }
+  .modal-overlay {
+    position: static;
+    background: none;
+    padding: 0;
+    overflow: visible;
+  }
+  .no-print {
+    display: none !important;
+  }
+}

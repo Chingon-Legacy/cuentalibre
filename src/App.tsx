@@ -7,7 +7,7 @@ import {
   useState,
 } from "react";
 import { LangProvider, useStrings, type Strings } from "./i18n";
-import { getExpenses, getInvoices, getSetting, initDb, setSetting } from "./db";
+import { getExpenses, getInvoices, getSetting, initDb, setSetting, generateRecurringInvoices } from "./db";
 import { getPack } from "./data/categories";
 import type { CategoryPack } from "./data/categories/types";
 import type { Expense, Invoice, Lang, Screen } from "./types";
@@ -15,6 +15,7 @@ import Onboarding from "./screens/Onboarding";
 import Home from "./screens/Home";
 import Invoices from "./screens/Invoices";
 import Expenses from "./screens/Expenses";
+import Customers from "./screens/Customers";
 import Reports from "./screens/Reports";
 import Settings from "./screens/Settings";
 
@@ -70,6 +71,7 @@ const NAV_ITEMS: { id: Screen; icon: string; label: (t: Strings) => string }[] =
   { id: "home", icon: "🏠", label: (t) => t.nav.home },
   { id: "invoices", icon: "🧾", label: (t) => t.nav.invoices },
   { id: "expenses", icon: "💸", label: (t) => t.nav.expenses },
+  { id: "customers", icon: "👥", label: (t) => t.nav.customers },
   { id: "reports", icon: "📊", label: (t) => t.nav.reports },
   { id: "settings", icon: "⚙️", label: (t) => t.nav.settings },
 ];
@@ -107,6 +109,7 @@ function Shell({ setBiz }: { setBiz: (id: string) => void }) {
 
   useEffect(() => {
     initDb()
+      .then(() => generateRecurringInvoices())
       .then(refresh)
       .then(() => getSetting("businessType"))
       .then((saved) => {
@@ -155,6 +158,7 @@ function Shell({ setBiz }: { setBiz: (id: string) => void }) {
         {ready && screen === "expenses" && (
           <Expenses expenses={expenses} refresh={refresh} />
         )}
+        {ready && screen === "customers" && <Customers invoices={invoices} />}
         {ready && screen === "reports" && (
           <Reports invoices={invoices} expenses={expenses} />
         )}

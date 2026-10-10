@@ -1,12 +1,108 @@
-import { useState } from "react";
-import { useBiz } from "../App";
-import { addInvoice, deleteInvoice, setInvoiceStatus } from "../db";
+import { useMemo, useState } from "react";
+import { useBiz, useBizName } from "../App";
+import { addInvoice, deleteInvoice, setInvoiceStatus, updateInvoice } from "../db";
 import { fmtDate, fmtMoney, todayISO, useLang, useStrings } from "../i18n";
-import type { Invoice } from "../types";
+import type { Invoice, Recurrence } from "../types";
 
 interface Props {
   invoices: Invoice[];
   refresh: () => Promise<void>;
+}
+
+type StatusFilter = "all" | "waiting" | "late" | "paid";
+
+function InvoiceDetail({
+  inv,
+  onClose,
+}: {
+  inv: Invoice;
+  onClose: () => void;
+}) {
+  const t = useStrings();
+  const lang = useLang();
+  const { bizName } = useBizName();
+  const { pack } = useBiz();
+  const today = todayISO();
+
+  const catLabel = (id: string) => {
+    const c = pack.income.find((x) => x.id === id);
+    return c ? (lang === "es" ? c.es : c.en) : t.expenses.other;
+  };
+
+  const late = inv.status === "waiting" && inv.due_date < today;
+  const due = inv.status === "paid" ? 0 : inv.amount;
+
+  return (
+    <div className="modal-overlay" onClick={onClose}>
+      <div className="modal print-sheet" onClick={(e) => e.stopPropagation()}>
+        <div className="invoice-paper">
+          <div className="invoice-head">
+            <div>
+              <div className="invoice-biz">{bizName || "CuentaLibre"}</div>
+              <div className="invoice-sub">CuentaLibre</div>
+            </div>
+            <div className="invoice-num">
+              <div className="label">{t.invoices.number}</div>
+              <div className="value">#{inv.number || "—"}</div>
+            </div>
+          </div>
+
+          <div className="invoice-meta">
+            <div>
+              <div className="label">{t.invoices.billTo}</div>
+              <div className="value">{inv.customer}</div>
+            </div>
+            <div>
+              <div className="label">{t.invoices.issueDate}</div>
+              <div className="value">{fmtDate(inv.created_at.slice(0, 10), lang)}</div>
+            </div>
+            <div>
+              <div className="label">{t.invoices.dueDate}</div>
+              <div className="value">{fmtDate(inv.due_date, lang)}</div>
+            </div>
+            <div>
+              <div className="label">{t.invoices.status}</div>
+              <div className="value">
+                {inv.status === "paid"
+                  ? t.invoices.paid
+                  : late
+                    ? t.invoices.late
+                    : t.invoices.waiting}
+              </div>
+            </div>
+          </div>
+
+          <table className="report invoice-table">
+            <thead>
+              <tr>
+                <th>{t.invoices.category}</th>
+                <th className="num">{t.invoices.amount}</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td>{catLabel(inv.category)}</td>
+                <td className="num">{fmtMoney(inv.amount, lang)}</td>
+              </tr>
+              <tr className="total">
+                <td>{t.invoices.amountDue}</td>
+                <td className="num">{fmtMoney(due, lang)}</td>
+              </tr>
+            </tbody>
+          </table>
+
+          <div className="form-actions no-print">
+            <button type="button" className="btn secondary" onClick={onClose}>
+              {t.invoices.cancel}
+            </button>
+            <button type="button" className="btn" onClick={() => window.print()}>
+              🖨 {t.invoices.print}
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
 }
 
 export default function Invoices({ invoices, refresh }: Props) {
@@ -14,10 +110,15 @@ export default function Invoices({ invoices, refresh }: Props) {
   const lang = useLang();
   const { pack } = useBiz();
   const [showForm, setShowForm] = useState(false);
+  const [editing, setEditing] = useState<Invoice | null>(null);
+  const [viewing, setViewing] = useState<Invoice | null>(null);
   const [customer, setCustomer] = useState("");
   const [amount, setAmount] = useState("");
   const [category, setCategory] = useState(pack.income[0]?.id ?? "other");
   const [dueDate, setDueDate] = useState(todayISO());
+  const [recurrence, setRecurrence] = useState<Recurrence>("none");
+  const [search, setSearch] = useState("");
+  const [statusFilter, setStatusFilter] = useState<StatusFilter>("all");
   const today = todayISO();
 
   const reset = () => {
@@ -25,18 +126,51 @@ export default function Invoices({ invoices, refresh }: Props) {
     setAmount("");
     setCategory(pack.income[0]?.id ?? "other");
     setDueDate(todayISO());
+    setRecurrence("none");
+    setEditing(null);
     setShowForm(false);
   };
 
-  const create = async () => {
+  const startCreate = () => {
+    setCustomer("");
+    setAmount("");
+    setCategory(pack.income[0]?.id ?? "other");
+    setDueDate(todayISO());
+    setRecurrence("none");
+    setEditing(null);
+    setShowForm(true);
+  };
+
+  const startEdit = (inv: Invoice) => {
+    setCustomer(inv.customer);
+    setAmount(String(inv.amount));
+    setCategory(inv.category);
+    setDueDate(inv.due_date);
+    setRecurrence("none");
+    setEditing(inv);
+    setShowForm(true);
+  };
+
+  const submit = async () => {
     const value = parseFloat(amount);
     if (!customer.trim() || Number.isNaN(value) || value <= 0) return;
-    await addInvoice({
-      customer: customer.trim(),
-      amount: Math.round(value * 100) / 100,
-      category,
-      due_date: dueDate,
-    });
+    const rounded = Math.round(value * 100) / 100;
+    if (editing) {
+      await updateInvoice(editing.id, {
+        customer: customer.trim(),
+        amount: rounded,
+        category,
+        due_date: dueDate,
+      });
+    } else {
+      await addInvoice({
+        customer: customer.trim(),
+        amount: rounded,
+        category,
+        due_date: dueDate,
+        recurrence,
+      });
+    }
     reset();
     await refresh();
   };
@@ -52,6 +186,20 @@ export default function Invoices({ invoices, refresh }: Props) {
     await refresh();
   };
 
+  const filtered = useMemo(() => {
+    const q = search.trim().toLowerCase();
+    return invoices.filter((inv) => {
+      if (q && !inv.customer.toLowerCase().includes(q)) return false;
+      const late = inv.status === "waiting" && inv.due_date < today;
+      if (statusFilter === "paid") return inv.status === "paid";
+      if (statusFilter === "late") return late;
+      if (statusFilter === "waiting")
+        return inv.status === "waiting" && !late;
+      return true;
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [invoices, search, statusFilter]);
+
   const badge = (inv: Invoice) => {
     if (inv.status === "paid")
       return <span className="badge paid">{t.invoices.paid}</span>;
@@ -66,13 +214,16 @@ export default function Invoices({ invoices, refresh }: Props) {
         <div>
           <h1 style={{ margin: 0 }}>🧾 {t.invoices.title}</h1>
         </div>
-        <button type="button" className="btn" onClick={() => setShowForm((v) => !v)}>
+        <button type="button" className="btn" onClick={startCreate}>
           {t.invoices.new}
         </button>
       </div>
 
       {showForm && (
         <div className="panel">
+          <h2 style={{ marginTop: 0 }}>
+            {editing ? t.invoices.editTitle : t.invoices.new}
+          </h2>
           <div className="form-grid">
             <div className="field">
               <label>{t.invoices.customer}</label>
@@ -111,33 +262,90 @@ export default function Invoices({ invoices, refresh }: Props) {
                 onChange={(e) => setDueDate(e.target.value)}
               />
             </div>
+            {!editing && (
+              <div className="field">
+                <label>{t.invoices.repeat}</label>
+                <select
+                  value={recurrence}
+                  onChange={(e) => setRecurrence(e.target.value as Recurrence)}
+                >
+                  <option value="none">{t.invoices.repeatNone}</option>
+                  <option value="weekly">{t.invoices.repeatWeekly}</option>
+                  <option value="monthly">{t.invoices.repeatMonthly}</option>
+                </select>
+              </div>
+            )}
           </div>
           <div className="form-actions">
             <button type="button" className="btn secondary" onClick={reset}>
               {t.invoices.cancel}
             </button>
-            <button type="button" className="btn" onClick={create}>
-              {t.invoices.create}
+            <button type="button" className="btn" onClick={submit}>
+              {editing ? t.invoices.saveChanges : t.invoices.create}
             </button>
           </div>
         </div>
       )}
 
       <div className="panel">
-        {invoices.length === 0 ? (
+        <div className="filter-bar">
+          <div className="field" style={{ flex: 2 }}>
+            <input
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              placeholder={t.invoices.searchPh}
+              aria-label={t.invoices.searchPh}
+            />
+          </div>
+          <div className="field" style={{ flex: 1, minWidth: 150 }}>
+            <select
+              value={statusFilter}
+              onChange={(e) => setStatusFilter(e.target.value as StatusFilter)}
+              aria-label={t.invoices.statusFilter}
+            >
+              <option value="all">{t.invoices.allStatuses}</option>
+              <option value="waiting">{t.invoices.waiting}</option>
+              <option value="late">{t.invoices.late}</option>
+              <option value="paid">{t.invoices.paid}</option>
+            </select>
+          </div>
+        </div>
+
+        {filtered.length === 0 ? (
           <p className="empty-note">{t.invoices.empty}</p>
         ) : (
           <ul className="row-list">
-            {invoices.map((inv) => (
+            {filtered.map((inv) => (
               <li key={inv.id}>
                 <div className="row-main">
-                  <div className="row-title">{inv.customer}</div>
+                  <div className="row-title">
+                    #{inv.number || "—"} · {inv.customer}
+                    {inv.recurrence !== "none" && (
+                      <span className="badge waiting" style={{ marginLeft: 8 }}>
+                        🔁 {t.invoices.recurring}
+                      </span>
+                    )}
+                  </div>
                   <div className="row-sub">
                     {t.invoices.dueDate}: {fmtDate(inv.due_date, lang)}
                   </div>
                 </div>
                 {badge(inv)}
                 <span className="row-amount positive">{fmtMoney(inv.amount, lang)}</span>
+                <button
+                  type="button"
+                  className="btn small secondary"
+                  onClick={() => setViewing(inv)}
+                >
+                  {t.invoices.view}
+                </button>
+                <button
+                  type="button"
+                  className="btn small secondary"
+                  onClick={() => startEdit(inv)}
+                >
+                  {t.invoices.edit}
+                </button>
                 {inv.status === "waiting" && (
                   <button
                     type="button"
@@ -159,6 +367,8 @@ export default function Invoices({ invoices, refresh }: Props) {
           </ul>
         )}
       </div>
+
+      {viewing && <InvoiceDetail inv={viewing} onClose={() => setViewing(null)} />}
     </div>
   );
 }

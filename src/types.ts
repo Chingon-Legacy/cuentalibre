@@ -1,16 +1,21 @@
 export type Lang = "en" | "es";
 
-export type Screen = "home" | "invoices" | "expenses" | "reports" | "settings";
+export type Screen = "home" | "invoices" | "expenses" | "reports" | "settings" | "customers";
 
 export type InvoiceStatus = "waiting" | "paid";
 
+export type Recurrence = "none" | "weekly" | "monthly";
+
 export interface Invoice {
   id: number;
+  number: string; // sequential, e.g. "0001"
   customer: string;
   amount: number;
   category: string;
   due_date: string; // YYYY-MM-DD
   status: InvoiceStatus;
+  recurrence: Recurrence;
+  recurring_from: number | null; // id of the template invoice this was generated from
   created_at: string;
 }
 

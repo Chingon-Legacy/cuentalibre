@@ -4,7 +4,7 @@ import { downloadCsv, toCsv } from "../backup";
 import { fmtDate, fmtMoney, todayISO, useLang, useStrings } from "../i18n";
 import type { Expense, Invoice } from "../types";
 
-type ReportId = "summary" | "income" | "expenses" | "owes" | "tax" | "monthly";
+type ReportId = "summary" | "income" | "expenses" | "owes" | "tax" | "monthly" | "taxguide";
 
 interface Props {
   invoices: Invoice[];
@@ -102,8 +102,15 @@ export default function Reports({ invoices, expenses }: Props) {
     { id: "expenses", label: t.reports.tExpensesByCat },
     { id: "owes", label: t.reports.tWhoOwes },
     { id: "tax", label: t.reports.tTax },
+    { id: "taxguide", label: t.reports.tTaxGuide },
     { id: "monthly", label: t.reports.tMonthly },
   ];
+
+  const pickReport = (id: ReportId) => {
+    setReport(id);
+    // The tax guide is most useful year-to-date.
+    if (id === "taxguide") setFrom(`${new Date().getFullYear()}-01-01`);
+  };
 
   const download = async () => {
     const name = `cuentalibre-${report}-${from}-to-${to}.csv`;
@@ -134,6 +141,17 @@ export default function Reports({ invoices, expenses }: Props) {
         ...expensesByCat.map(([c, a]): (string | number)[] => [catLabel(c), money(a)]),
         [t.reports.left, money(moneyIn - moneyOut)],
       ];
+    } else if (report === "taxguide") {
+      headers = [t.reports.category, t.reports.amount];
+      rows = [
+        [t.reports.taxIncome, money(moneyIn)],
+        [t.reports.taxIncomeWhy, ""],
+        [t.reports.taxExpenses, money(moneyOut)],
+        ...expensesByCat.map(([c, a]): (string | number)[] => [catLabel(c), money(a)]),
+        [t.reports.taxExpensesWhy, ""],
+        [t.reports.taxProfit, money(moneyIn - moneyOut)],
+        [t.reports.taxProfitWhy, ""],
+      ];
     } else {
       headers = [t.reports.month, t.reports.moneyIn, t.reports.moneyOut, t.reports.left];
       rows = months.map((m) => [m.label, money(m.in), money(m.out), money(m.in - m.out)]);
@@ -152,7 +170,9 @@ export default function Reports({ invoices, expenses }: Props) {
             ? waitingInRange.length > 0
             : report === "tax"
               ? paidInRange.length > 0 || expInRange.length > 0
-              : months.some((m) => m.in > 0 || m.out > 0);
+              : report === "taxguide"
+                ? paidInRange.length > 0 || expInRange.length > 0
+                : months.some((m) => m.in > 0 || m.out > 0);
 
   return (
     <div className="page">
@@ -163,7 +183,7 @@ export default function Reports({ invoices, expenses }: Props) {
         <div className="report-controls">
           <div className="field">
             <label>{t.reports.type}</label>
-            <select value={report} onChange={(e) => setReport(e.target.value as ReportId)}>
+            <select value={report} onChange={(e) => pickReport(e.target.value as ReportId)}>
               {reportTypes.map((r) => (
                 <option key={r.id} value={r.id}>
                   {r.label}
@@ -303,6 +323,49 @@ export default function Reports({ invoices, expenses }: Props) {
                 </tr>
               </tbody>
             </table>
+          </>
+        ) : report === "taxguide" ? (
+          <>
+            <p className="subtitle">💡 {t.reports.taxNote}</p>
+            <div className="tax-block">
+              <div className="tax-line">
+                <span className="tax-name">💰 {t.reports.taxIncome}</span>
+                <span className="tax-amount">{fmtMoney(moneyIn, lang)}</span>
+              </div>
+              <p className="tax-why">{t.reports.taxIncomeWhy}</p>
+            </div>
+            <div className="tax-block">
+              <div className="tax-line">
+                <span className="tax-name">🧾 {t.reports.taxExpenses}</span>
+                <span className="tax-amount">{fmtMoney(moneyOut, lang)}</span>
+              </div>
+              <p className="tax-why">{t.reports.taxExpensesWhy}</p>
+              {expensesByCat.length > 0 && (
+                <table className="report">
+                  <thead>
+                    <tr>
+                      <th>{t.reports.category}</th>
+                      <th className="num">{t.reports.amount}</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {expensesByCat.map(([c, a]) => (
+                      <tr key={c}>
+                        <td>{catLabel(c)}</td>
+                        <td className="num">{fmtMoney(a, lang)}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              )}
+            </div>
+            <div className="tax-block">
+              <div className="tax-line">
+                <span className="tax-name">✅ {t.reports.taxProfit}</span>
+                <span className="tax-amount">{fmtMoney(moneyIn - moneyOut, lang)}</span>
+              </div>
+              <p className="tax-why">{t.reports.taxProfitWhy}</p>
+            </div>
           </>
         ) : (
           <table className="report">

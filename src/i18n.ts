@@ -14,6 +14,7 @@ const en = {
     home: "Home",
     invoices: "Invoices",
     expenses: "Expenses",
+    customers: "Customers",
     reports: "Reports",
     settings: "Settings",
   },
@@ -44,6 +45,7 @@ const en = {
     due: "Due",
     newInvoice: "New invoice",
     addExpense: "Add expense",
+    cashflowTitle: "Cash flow — last 6 months",
   },
 
   invoices: {
@@ -63,6 +65,25 @@ const en = {
     delete: "Delete",
     confirmDelete: "Delete this invoice?",
     empty: "No invoices yet. Create your first one!",
+    number: "Invoice #",
+    view: "View",
+    edit: "Edit",
+    editTitle: "Edit invoice",
+    saveChanges: "Save changes",
+    status: "Status",
+    searchPh: "Search by customer…",
+    statusFilter: "Status",
+    allStatuses: "All",
+    repeat: "Repeat",
+    repeatNone: "Only once",
+    repeatWeekly: "Every week",
+    repeatMonthly: "Every month",
+    recurring: "Repeats",
+    print: "Print / Save as PDF",
+    issueDate: "Date issued",
+    billTo: "Bill to",
+    from: "From",
+    amountDue: "Amount due",
   },
 
   expenses: {
@@ -79,6 +100,23 @@ const en = {
     confirmDelete: "Delete this expense?",
     empty: "No expenses yet.",
     other: "Other",
+    edit: "Edit",
+    editTitle: "Edit expense",
+    saveChanges: "Save changes",
+    searchPh: "Search expenses…",
+    allCategories: "All categories",
+  },
+
+  customers: {
+    title: "Customers",
+    billed: "Total billed",
+    paid: "Paid",
+    owes: "Still owes",
+    invoices: "Invoices",
+    showInvoices: "View invoices",
+    hideInvoices: "Hide",
+    empty:
+      "No customers yet. They'll show up here when you create invoices.",
   },
 
   reports: {
@@ -93,6 +131,7 @@ const en = {
     tExpensesByCat: "Expenses by category",
     tWhoOwes: "Who owes me",
     tTax: "Tax summary",
+    tTaxGuide: "Tax guide",
     tMonthly: "Month by month",
     category: "Category",
     amount: "Amount",
@@ -106,6 +145,15 @@ const en = {
     paid: "Paid",
     waiting: "Waiting",
     taxNote: "Take this to your tax preparer.",
+    taxIncome: "Total income",
+    taxIncomeWhy:
+      "Money your customers actually paid you. This is the number the IRS taxes.",
+    taxExpenses: "Business expenses",
+    taxExpensesWhy:
+      "Money you spent to run your business. These lower the amount you pay taxes on.",
+    taxProfit: "Net profit",
+    taxProfitWhy:
+      "Income minus expenses. Your taxes are roughly based on this number.",
   },
 
   settings: {
@@ -143,6 +191,7 @@ const es: typeof en = {
     home: "Inicio",
     invoices: "Facturas",
     expenses: "Gastos",
+    customers: "Clientes",
     reports: "Reportes",
     settings: "Ajustes",
   },
@@ -173,6 +222,7 @@ const es: typeof en = {
     due: "Vence",
     newInvoice: "Nueva factura",
     addExpense: "Agregar gasto",
+    cashflowTitle: "Flujo de dinero — últimos 6 meses",
   },
 
   invoices: {
@@ -192,6 +242,25 @@ const es: typeof en = {
     delete: "Borrar",
     confirmDelete: "¿Borrar esta factura?",
     empty: "Aún no hay facturas. ¡Crea la primera!",
+    number: "Factura n.º",
+    view: "Ver",
+    edit: "Editar",
+    editTitle: "Editar factura",
+    saveChanges: "Guardar cambios",
+    status: "Estado",
+    searchPh: "Buscar por cliente…",
+    statusFilter: "Estado",
+    allStatuses: "Todos",
+    repeat: "Repetir",
+    repeatNone: "Solo una vez",
+    repeatWeekly: "Cada semana",
+    repeatMonthly: "Cada mes",
+    recurring: "Se repite",
+    print: "Imprimir / Guardar como PDF",
+    issueDate: "Fecha de emisión",
+    billTo: "Facturar a",
+    from: "De",
+    amountDue: "Por pagar",
   },
 
   expenses: {
@@ -208,6 +277,23 @@ const es: typeof en = {
     confirmDelete: "¿Borrar este gasto?",
     empty: "Aún no hay gastos.",
     other: "Otro",
+    edit: "Editar",
+    editTitle: "Editar gasto",
+    saveChanges: "Guardar cambios",
+    searchPh: "Buscar gastos…",
+    allCategories: "Todas las categorías",
+  },
+
+  customers: {
+    title: "Clientes",
+    billed: "Total facturado",
+    paid: "Pagado",
+    owes: "Aún debe",
+    invoices: "Facturas",
+    showInvoices: "Ver facturas",
+    hideInvoices: "Ocultar",
+    empty:
+      "Aún no hay clientes. Aparecerán aquí cuando crees facturas.",
   },
 
   reports: {
@@ -222,6 +308,7 @@ const es: typeof en = {
     tExpensesByCat: "Gastos por categoría",
     tWhoOwes: "Quién me debe",
     tTax: "Resumen de impuestos",
+    tTaxGuide: "Guía de impuestos",
     tMonthly: "Mes por mes",
     category: "Categoría",
     amount: "Cantidad",
@@ -235,6 +322,15 @@ const es: typeof en = {
     paid: "Pagada",
     waiting: "En espera",
     taxNote: "Llévale esto a tu preparador de impuestos.",
+    taxIncome: "Ingresos totales",
+    taxIncomeWhy:
+      "Dinero que tus clientes realmente te pagaron. Este es el número que grava el IRS.",
+    taxExpenses: "Gastos del negocio",
+    taxExpensesWhy:
+      "Dinero que gastaste para operar tu negocio. Estos reducen la cantidad sobre la que pagas impuestos.",
+    taxProfit: "Ganancia neta",
+    taxProfitWhy:
+      "Ingresos menos gastos. Tus impuestos se basan aproximadamente en este número.",
   },
 
   settings: {
