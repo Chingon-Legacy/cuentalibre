@@ -11,8 +11,8 @@
  * HTML is written into it; if the popup is blocked, the file downloads
  * instead so nothing is lost.
  */
-import { writeTextFile } from "@tauri-apps/plugin-fs";
-import { cacheDir, join } from "@tauri-apps/api/path";
+import { mkdir, writeTextFile } from "@tauri-apps/plugin-fs";
+import { appDataDir, join } from "@tauri-apps/api/path";
 import { openPath } from "@tauri-apps/plugin-opener";
 import { message } from "@tauri-apps/plugin-dialog";
 import { isTauri } from "./external";
@@ -28,14 +28,17 @@ function safeFilename(name: string): string {
 
 async function openInTauri(
   html: string,
-  filename: string,
+  _filename: string,
   lang: Lang
 ): Promise<void> {
   try {
-    // cacheDir() exists on every desktop OS and is covered by the fs
-    // write permission ($APPDATA on Windows, $HOME on macOS/Linux).
-    const dir = await cacheDir();
-    const filePath = await join(dir, safeFilename(filename));
+    // appDataDir() is covered by the fs $APPDATA/** write scope on every
+    // desktop OS. The folder may not exist yet on a fresh install, and
+    // writeTextFile does not create parent folders — so create it first.
+    const dir = await appDataDir();
+    await mkdir(dir, { recursive: true });
+    // Fixed temp name: overwritten on every print, so no buildup of files.
+    const filePath = await join(dir, "cuentalibre-print.html");
     await writeTextFile(filePath, html);
     // openPath opens the .html file with the default browser.
     // (Requires the "opener:allow-open-path" capability.)
