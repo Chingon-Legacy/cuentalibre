@@ -1,5 +1,8 @@
 import { openUrl } from "@tauri-apps/plugin-opener";
 
+/** Official Tauri runtime check (verified present in @tauri-apps/api v2). */
+export { isTauri } from "@tauri-apps/api/core";
+
 /**
  * Open an external link in the user's system browser.
  *

@@ -8,6 +8,8 @@ import { openExternal } from "../external";
 import EmptyState from "../components/EmptyState";
 import ServicePicker from "../components/ServicePicker";
 import PayMethodSelect from "../components/PayMethodSelect";
+import { printInvoiceHTML } from "../printDocs";
+import { openPrintDocument } from "../printOpen";
 import type { Invoice, PayMethod, Recurrence, Service } from "../types";
 
 interface Props {
@@ -51,6 +53,40 @@ function InvoiceDetail({
     inv.tax_rate > 0
       ? `${(inv.tax_rate * 100).toFixed(2).replace(/\.?0+$/, "")}%`
       : null;
+
+  /** Build a standalone invoice document and open it where the user can
+   *  print it or save it as a PDF (window.print() doesn't work in the
+   *  installed desktop app). */
+  const doPrint = async () => {
+    const html = printInvoiceHTML(
+      {
+        bizName: bizName || "CuentaLibre",
+        number: inv.number || "",
+        customer: inv.customer,
+        issueDate: inv.created_at.slice(0, 10),
+        dueDate: inv.due_date,
+        status:
+          inv.status === "paid"
+            ? t.invoices.paid
+            : late
+              ? t.invoices.late
+              : t.invoices.waiting,
+        payMethod: payMethodLabel,
+        category: catLabel(inv.category),
+        subtotal: inv.amount,
+        taxLabel:
+          inv.tax_amount > 0
+            ? `${t.invoices.salesTax}${ratePct ? ` (${ratePct})` : ""}`
+            : null,
+        taxAmount: inv.tax_amount,
+        total,
+        amountDue: due,
+      },
+      lang,
+      t
+    );
+    await openPrintDocument(html, `invoice-${inv.number || inv.id}`, lang);
+  };
 
   return (
     <div className="modal-overlay" onClick={onClose}>
@@ -130,7 +166,7 @@ function InvoiceDetail({
             <button type="button" className="btn secondary" onClick={onClose}>
               {t.invoices.cancel}
             </button>
-            <button type="button" className="btn" onClick={() => window.print()}>
+            <button type="button" className="btn" onClick={doPrint}>
               🖨 {t.invoices.print}
             </button>
           </div>

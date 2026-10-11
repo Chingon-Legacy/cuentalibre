@@ -1,5 +1,6 @@
 import { open, save } from "@tauri-apps/plugin-dialog";
 import { readTextFile, writeTextFile } from "@tauri-apps/plugin-fs";
+import { isTauri } from "./external";
 import {
   exportAllData,
   getActiveBusinessId,
@@ -162,17 +163,19 @@ export async function downloadText(
   filterName = "Text"
 ): Promise<void> {
   const ext = filename.split(".").pop() ?? "txt";
-  try {
-    const path = await save({
-      defaultPath: filename,
-      filters: [{ name: filterName, extensions: [ext] }],
-    });
-    if (path) {
+  if (isTauri()) {
+    try {
+      const path = await save({
+        defaultPath: filename,
+        filters: [{ name: filterName, extensions: [ext] }],
+      });
+      if (!path) return; // user cancelled the dialog — respect it
       await writeTextFile(path, text);
       return;
+    } catch {
+      // Unexpected Tauri failure — fall through to the browser download,
+      // which is a harmless no-op inside the desktop app.
     }
-  } catch {
-    // Not running inside Tauri — fall through to browser download.
   }
   const blob = new Blob([text], { type: "text/plain;charset=utf-8" });
   const url = URL.createObjectURL(blob);
@@ -191,17 +194,19 @@ export async function downloadText(
  * plain browser download otherwise.
  */
 export async function downloadCsv(filename: string, csv: string): Promise<void> {
-  try {
-    const path = await save({
-      defaultPath: filename,
-      filters: [{ name: "CSV", extensions: ["csv"] }],
-    });
-    if (path) {
+  if (isTauri()) {
+    try {
+      const path = await save({
+        defaultPath: filename,
+        filters: [{ name: "CSV", extensions: ["csv"] }],
+      });
+      if (!path) return; // user cancelled the dialog — respect it
       await writeTextFile(path, csv);
       return;
+    } catch {
+      // Unexpected Tauri failure — fall through to the browser download,
+      // which is a harmless no-op inside the desktop app.
     }
-  } catch {
-    // Not running inside Tauri — fall through to browser download.
   }
   const blob = new Blob([csv], { type: "text/csv;charset=utf-8" });
   const url = URL.createObjectURL(blob);

@@ -755,6 +755,29 @@ const en = {
     billedTo: "Billed to",
   },
 
+  print: {
+    invoiceTitle: "INVOICE",
+    invoiceTitleAlt: "FACTURA",
+    donationTitle: "DONATION RECEIPT",
+    donationTitleAlt: "RECIBO DE DONACIÓN",
+    statementTitle: "CUSTOMER STATEMENT",
+    statementTitleAlt: "ESTADO DE CUENTA",
+    description: "Description",
+    thankYou: "Thank you for your business!",
+    madeWith: "Made with CuentaLibre",
+    totalBilled: "Total billed",
+    totalPaid: "Total paid",
+    balanceDue: "Balance due",
+    receiptNo: "Receipt no.",
+    amountDueLine: "Amount due",
+    status: "Status",
+    payMethod: "Payment method",
+    paid: "Paid",
+    failedTitle: "Couldn't open the document",
+    failedBody:
+      "Something went wrong opening the print document. Please try again.",
+  },
+
   dupes: {
     possibleBadge: "Possible duplicate",
     reviewTitle: "Review possible duplicates",
@@ -1723,6 +1746,29 @@ const es: typeof en = {
     print: "Imprimir / Guardar como PDF",
     noInvoices: "No hay facturas en este período.",
     billedTo: "Facturado a",
+  },
+
+  print: {
+    invoiceTitle: "FACTURA",
+    invoiceTitleAlt: "INVOICE",
+    donationTitle: "RECIBO DE DONACIÓN",
+    donationTitleAlt: "DONATION RECEIPT",
+    statementTitle: "ESTADO DE CUENTA",
+    statementTitleAlt: "CUSTOMER STATEMENT",
+    description: "Descripción",
+    thankYou: "¡Gracias por su preferencia!",
+    madeWith: "Hecho con CuentaLibre",
+    totalBilled: "Total facturado",
+    totalPaid: "Total pagado",
+    balanceDue: "Saldo pendiente",
+    receiptNo: "Recibo n.º",
+    amountDueLine: "Monto adeudado",
+    status: "Estado",
+    payMethod: "Método de pago",
+    paid: "Pagado",
+    failedTitle: "No se pudo abrir el documento",
+    failedBody:
+      "Algo salió mal al abrir el documento para imprimir. Inténtalo de nuevo.",
   },
 
   dupes: {

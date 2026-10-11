@@ -3,6 +3,8 @@ import { useBiz } from "../App";
 import { fmtDate, fmtMoney, todayISO, useLang, useStrings } from "../i18n";
 import EmptyState from "../components/EmptyState";
 import { invoiceTotal } from "../db";
+import { printStatementHTML } from "../printDocs";
+import { openPrintDocument } from "../printOpen";
 import type { Invoice } from "../types";
 
 interface Props {
@@ -46,6 +48,42 @@ function StatementModal({
         .reduce((sum, inv) => sum + invoiceTotal(inv), 0),
     [list]
   );
+
+  const statusLabel = (inv: Invoice) => {
+    if (inv.status === "paid") return t.invoices.paid;
+    if (inv.status === "waiting" && inv.due_date < today) return t.invoices.late;
+    return t.invoices.waiting;
+  };
+
+  /** Build a standalone statement document for the same date range the
+   *  modal is showing, and open it where the user can print it or save
+   *  it as a PDF (window.print() doesn't work in the installed app). */
+  const doPrint = async () => {
+    const billed = list.reduce((sum, inv) => sum + invoiceTotal(inv), 0);
+    const paid = list
+      .filter((inv) => inv.status === "paid")
+      .reduce((sum, inv) => sum + invoiceTotal(inv), 0);
+    const html = printStatementHTML(
+      {
+        bizName: bizName || "CuentaLibre",
+        customerName: row.name,
+        from,
+        to,
+        rows: list.map((inv) => ({
+          number: inv.number || "",
+          date: inv.due_date,
+          amount: invoiceTotal(inv),
+          status: statusLabel(inv),
+        })),
+        totalBilled: billed,
+        totalPaid: paid,
+        balanceDue: totalOwed,
+      },
+      lang,
+      t
+    );
+    await openPrintDocument(html, `statement-${row.name}`, lang);
+  };
 
   const badge = (inv: Invoice) => {
     const late = inv.status === "waiting" && inv.due_date < today;
@@ -149,7 +187,7 @@ function StatementModal({
             <button type="button" className="btn secondary" onClick={onClose}>
               {t.invoices.cancel}
             </button>
-            <button type="button" className="btn" onClick={() => window.print()}>
+            <button type="button" className="btn" onClick={doPrint}>
               🖨 {t.statement.print}
             </button>
           </div>

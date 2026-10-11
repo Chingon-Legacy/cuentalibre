@@ -3,6 +3,8 @@ import { useBiz } from "../App";
 import { addDonation, deleteDonation, updateDonation } from "../db";
 import { fmtDate, fmtMoney, todayISO, useLang, useStrings } from "../i18n";
 import EmptyState from "../components/EmptyState";
+import { printDonationReceiptHTML } from "../printDocs";
+import { openPrintDocument } from "../printOpen";
 import type { Donation } from "../types";
 
 interface Props {
@@ -14,6 +16,26 @@ function ReceiptModal({ d, onClose }: { d: Donation; onClose: () => void }) {
   const t = useStrings();
   const lang = useLang();
   const { bizName, active } = useBiz();
+
+  /** Build a standalone receipt document and open it where the donor can
+   *  print it or save it as a PDF (window.print() doesn't work in the
+   *  installed desktop app). */
+  const doPrint = async () => {
+    const html = printDonationReceiptHTML(
+      {
+        orgName: bizName || "CuentaLibre",
+        ein: active?.ein || null,
+        receiptNo: String(d.id),
+        donor: d.donor,
+        amount: d.amount,
+        date: d.date,
+        campaign: d.campaign || null,
+      },
+      lang,
+      t
+    );
+    await openPrintDocument(html, `donation-receipt-${d.id}`, lang);
+  };
 
   return (
     <div className="modal-overlay" onClick={onClose}>
@@ -90,7 +112,7 @@ function ReceiptModal({ d, onClose }: { d: Donation; onClose: () => void }) {
             <button type="button" className="btn secondary" onClick={onClose}>
               {t.receipt.close}
             </button>
-            <button type="button" className="btn" onClick={() => window.print()}>
+            <button type="button" className="btn" onClick={doPrint}>
               🖨 {t.receipt.print}
             </button>
           </div>
