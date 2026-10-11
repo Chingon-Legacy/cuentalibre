@@ -1,1 +1,57 @@
-{"$schema":"https://schema.tauri.app/config/2","app":{"security":{"csp":null},"windows":[{"height":750,"minHeight":620,"minWidth":900,"title":"CuentaLibre","width":1100}]},"build":{"beforeBuildCommand":"npm run build","beforeDevCommand":"npm run dev","devUrl":"http://localhost:1420","frontendDist":"../dist"},"bundle":{"active":true,"category":"Finance","icon":["icons/32x32.png","icons/128x128.png","icons/128x128@2x.png","icons/icon.icns","icons/icon.ico"],"targets":"all","windows":{"nsis":{"languages":["English","Spanish"]}}},"identifier":"com.cuentalibre.app","plugins":{"sql":{},"updater":{"active":true,"dialog":true,"endpoints":["https://github.com/YOUR_GITHUB_USERNAME/cuentalibre/releases/latest/download/latest.json"],"pubkey":"REPLACE_WITH_YOUR_UPDATER_PUBLIC_KEY"}},"productName":"CuentaLibre","version":"0.1.0"}
+{
+  "$schema": "https://schema.tauri.app/config/2",
+  "app": {
+    "security": {
+      "csp": null
+    },
+    "windows": [
+      {
+        "height": 750,
+        "minHeight": 620,
+        "minWidth": 900,
+        "title": "CuentaLibre",
+        "width": 1100
+      }
+    ]
+  },
+  "build": {
+    "beforeBuildCommand": "npm run build",
+    "beforeDevCommand": "npm run dev",
+    "devUrl": "http://localhost:1420",
+    "frontendDist": "../dist"
+  },
+  "bundle": {
+    "active": true,
+    "category": "Finance",
+    "icon": [
+      "icons/32x32.png",
+      "icons/128x128.png",
+      "icons/128x128@2x.png",
+      "icons/icon.icns",
+      "icons/icon.ico"
+    ],
+    "targets": "all",
+    "windows": {
+      "nsis": {
+        "languages": [
+          "English",
+          "Spanish"
+        ]
+      }
+    }
+  },
+  "identifier": "com.cuentalibre.app",
+  "plugins": {
+    "sql": {},
+    "updater": {
+      "active": true,
+      "dialog": true,
+      "endpoints": [
+        "https://github.com/Chingon-Legacy/cuentalibre/releases/latest/download/latest.json"
+      ],
+      "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IDYwQUY1ODIzRDE0RDBBQjcKUldTM0NrM1JJMWl2WUErS05JOC9wemt4Qnc2T2lEQmdFd2JHUjNJbjFpK0ZJR0tTbGlHQUdXSHYK"
+    }
+  },
+  "productName": "CuentaLibre",
+  "version": "0.1.0"
+}
