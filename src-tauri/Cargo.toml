@@ -1,6 +1,6 @@
 [package]
 name = "cuentalibre"
-version = "0.1.0"
+version = "0.1.1"
 description = "CuentaLibre — free, open-source, bilingual accounting app for small business owners"
 authors = ["Hector Morales"]
 license = "MIT"

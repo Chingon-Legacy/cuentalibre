@@ -9,7 +9,7 @@ import AddBusinessModal from "../components/AddBusinessModal";
 import { openDonate } from "../components/SupportDialog";
 import type { AccountingMethod, Business, Lang } from "../types";
 
-const APP_VERSION = "0.1.0";
+const APP_VERSION = "0.1.1";
 
 function bizTypeLabel(b: Business, lang: Lang): string {
   if (b.entity_type === "nonprofit") {
