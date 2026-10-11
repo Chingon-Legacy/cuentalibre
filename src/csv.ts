@@ -91,13 +91,25 @@ export function parseCsvDate(s: string): string | null {
   let m = v.match(/^(\d{4})-(\d{1,2})-(\d{1,2})$/);
   if (m) {
     const [, y, mo, d] = m;
+    const month = Number(mo);
+    const day = Number(d);
+    if (month < 1 || month > 12 || day < 1 || day > 31) return null;
     return `${y}-${mo.padStart(2, "0")}-${d.padStart(2, "0")}`;
   }
   m = v.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
   if (m) {
     const [, mo, d, y] = m;
-    const dt = new Date(Number(y), Number(mo) - 1, Number(d));
-    if (Number.isNaN(dt.getTime())) return null;
+    const month = Number(mo);
+    const day = Number(d);
+    const dt = new Date(Number(y), month - 1, day);
+    // Reject rollover: 02/30/2026 becomes Mar 2, which is not what the
+    // bank's CSV meant, so require the components to round-trip exactly.
+    if (
+      Number.isNaN(dt.getTime()) ||
+      dt.getMonth() !== month - 1 ||
+      dt.getDate() !== day
+    )
+      return null;
     return `${y}-${mo.padStart(2, "0")}-${d.padStart(2, "0")}`;
   }
   return null;
