@@ -76,7 +76,7 @@
           "path": "$APPDATA/**"
         }
       ],
-      "identifier": "fs:allow-remove-file"
+      "identifier": "fs:allow-remove"
     }
   ],
   "windows": [
