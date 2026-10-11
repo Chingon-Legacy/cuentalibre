@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useStrings } from "../i18n";
+import { openExternal } from "../external";
 
 /** Chingón Legacy donation page (PayPal Giving Fund). */
 export const DONATE_URL =
@@ -7,7 +8,7 @@ export const DONATE_URL =
 
 /** Open the donation page in the system browser. */
 export function openDonate(): void {
-  window.open(DONATE_URL, "_blank", "noopener");
+  void openExternal(DONATE_URL);
 }
 
 /**

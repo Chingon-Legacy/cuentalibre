@@ -4,6 +4,7 @@ import { addInvoice, calcTaxAmount, deleteInvoice, invoiceTotal, setInvoiceStatu
 import { getStateInfo } from "../data/us-states";
 import { fmtDate, fmtMoney, todayISO, useLang, useStrings } from "../i18n";
 import { daysBetween, normStr } from "../dupes";
+import { openExternal } from "../external";
 import EmptyState from "../components/EmptyState";
 import ServicePicker from "../components/ServicePicker";
 import PayMethodSelect from "../components/PayMethodSelect";
@@ -309,7 +310,7 @@ export default function Invoices({ invoices, services, refresh }: Props) {
       .replace("{number}", inv.number || "—")
       .replace("{amount}", fmtMoney(invoiceTotal(inv), lang))
       .replace("{date}", fmtDate(inv.due_date, lang));
-    window.open(`https://wa.me/?text=${encodeURIComponent(msg)}`, "_blank", "noopener");
+    void openExternal(`https://wa.me/?text=${encodeURIComponent(msg)}`);
   };
 
   const remove = async (id: number) => {

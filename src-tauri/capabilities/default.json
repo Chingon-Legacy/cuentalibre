@@ -12,6 +12,7 @@
     "dialog:allow-open",
     "dialog:allow-message",
     "notification:default",
+    "opener:default",
     "updater:allow-check",
     "updater:allow-download-and-install",
     {
