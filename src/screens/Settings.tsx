@@ -6,6 +6,7 @@ import { businessTypes } from "../data/categories";
 import { US_STATES } from "../data/us-states";
 import { fmtDate, useLang, useStrings } from "../i18n";
 import AddBusinessModal from "../components/AddBusinessModal";
+import { openDonate } from "../components/SupportDialog";
 import type { AccountingMethod, Business, Lang } from "../types";
 
 const APP_VERSION = "0.1.0";
@@ -551,6 +552,10 @@ export default function Settings({ refresh }: { refresh: () => Promise<void> }) 
       <div className="panel">
         <h2>ℹ️ {t.settings.about}</h2>
         <p style={{ color: "var(--ink-soft)", lineHeight: 1.6 }}>{t.settings.aboutText}</p>
+        <p style={{ color: "var(--ink-soft)", lineHeight: 1.6 }}>{t.settings.donateDesc}</p>
+        <button type="button" className="btn small" onClick={openDonate}>
+          {t.settings.donate}
+        </button>
         <p className="disclaimer">{t.settings.disclaimer}</p>
         <p style={{ color: "var(--ink-faint)", fontSize: 13 }}>
           {t.settings.version} {APP_VERSION} · MIT

@@ -64,6 +64,7 @@ import type {
 import { checkDueReminders, type ReminderStrings } from "./notify";
 import Tour, { type TourStep } from "./components/Tour";
 import HelpPanel from "./components/HelpPanel";
+import SupportDialog from "./components/SupportDialog";
 import MoreMenu, { type MoreMenuItem } from "./components/MoreMenu";
 import AddBusinessModal from "./components/AddBusinessModal";
 import Onboarding from "./screens/Onboarding";
@@ -309,6 +310,14 @@ function Shell({
   const t = useStrings();
   const [screen, setScreen] = useState<Screen>("home");
   const [helpOpen, setHelpOpen] = useState(false);
+  // Startup "support us" dialog — shows on every launch until dismissed.
+  const [supportOpen, setSupportOpen] = useState(() => {
+    try {
+      return localStorage.getItem("cl-hide-support") !== "1";
+    } catch {
+      return true;
+    }
+  });
   const [tourOpen, setTourOpen] = useState(false);
   const [moreOpen, setMoreOpen] = useState(false); // desktop dropdown
   const [sheetOpen, setSheetOpen] = useState(false); // mobile bottom sheet
@@ -594,6 +603,7 @@ function Shell({
       )}
 
       {helpOpen && <HelpPanel onClose={() => setHelpOpen(false)} />}
+      {supportOpen && <SupportDialog onClose={() => setSupportOpen(false)} />}
       {tourOpen && ready && <Tour steps={tourSteps} onDone={closeTour} />}
     </>
   );

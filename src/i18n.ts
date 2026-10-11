@@ -412,9 +412,16 @@ const en = {
     openBackupDesc: "Restore your work from a backup file.",
     about: "About",
     aboutText:
-      "CuentaLibre is free, open-source accounting software for small business owners. Your data stays on your computer — never on someone else's server.",
+      "CuentaLibre is free, open-source accounting software from Chingón Legacy for small business owners. Your data stays on your computer — never on someone else's server.",
     disclaimer:
       "CuentaLibre is not a tax professional. Tax rates change — verify your state and local rates with a tax preparer.",
+    supportTitle: "Enjoying CuentaLibre?",
+    supportBody:
+      "Thank you for using CuentaLibre! This is free software from Chingón Legacy, a nonprofit. If it helps your business, please consider donating to keep it free for everyone.",
+    donate: "❤ Donate",
+    donateDesc: "Your gift to Chingón Legacy keeps CuentaLibre free for every small business.",
+    maybeLater: "Maybe later",
+    dontShowAgain: "Don't show this again",
     version: "Version",
     saved: "Work saved to your computer.",
     nonprofitSaved: "Saved",
@@ -1375,9 +1382,16 @@ const es: typeof en = {
     openBackupDesc: "Restaura tu trabajo desde un archivo de respaldo.",
     about: "Acerca de",
     aboutText:
-      "CuentaLibre es software de contabilidad gratuito y de código abierto para pequeños negocios. Tus datos se quedan en tu computadora — nunca en el servidor de otra persona.",
+      "CuentaLibre es software de contabilidad gratuito y de código abierto de Chingón Legacy para pequeños negocios. Tus datos se quedan en tu computadora — nunca en el servidor de otra persona.",
     disclaimer:
       "CuentaLibre no es un profesional de impuestos. Las tasas cambian — verifica tus tasas estatales y locales con un preparador.",
+    supportTitle: "¿Te gusta CuentaLibre?",
+    supportBody:
+      "¡Gracias por usar CuentaLibre! Este es un software gratuito de Chingón Legacy, una organización sin fines de lucro. Si ayuda a tu negocio, considera hacer una donación para mantenerlo gratis para todos.",
+    donate: "❤ Donar",
+    donateDesc: "Tu donación a Chingón Legacy mantiene CuentaLibre gratis para cada pequeño negocio.",
+    maybeLater: "Quizás después",
+    dontShowAgain: "No mostrar de nuevo",
     version: "Versión",
     saved: "Respaldo guardado en tu computadora.",
     nonprofitSaved: "Guardado",
