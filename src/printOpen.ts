@@ -12,7 +12,7 @@
  * instead so nothing is lost.
  */
 import { mkdir, writeTextFile } from "@tauri-apps/plugin-fs";
-import { appDataDir, join } from "@tauri-apps/api/path";
+import { appDataDir, downloadDir, join } from "@tauri-apps/api/path";
 import { openPath } from "@tauri-apps/plugin-opener";
 import { message } from "@tauri-apps/plugin-dialog";
 import { isTauri } from "./external";
@@ -31,26 +31,44 @@ async function openInTauri(
   _filename: string,
   lang: Lang
 ): Promise<void> {
-  try {
-    // appDataDir() is covered by the fs $APPDATA/** write scope on every
-    // desktop OS. The folder may not exist yet on a fresh install, and
-    // writeTextFile does not create parent folders — so create it first.
-    const dir = await appDataDir();
-    await mkdir(dir, { recursive: true });
-    // Fixed temp name: overwritten on every print, so no buildup of files.
-    const filePath = await join(dir, "cuentalibre-print.html");
-    await writeTextFile(filePath, html);
-    // openPath opens the .html file with the default browser.
-    // (Requires the "opener:allow-open-path" capability.)
-    await openPath(filePath);
-  } catch {
-    // Never fail silently: tell the user something went wrong.
-    const t = strings[lang].print;
+  const t = strings[lang].print;
+  let lastError: unknown = null;
+  // Candidate locations for the temporary print file, tried in order.
+  // The app-data folder is preferred (no clutter); Downloads is the
+  // fallback because it is guaranteed to exist and be writable.
+  const candidates: Array<() => Promise<string>> = [
+    async () => {
+      const dir = await appDataDir();
+      // writeTextFile does not create parent folders — create it first.
+      await mkdir(dir, { recursive: true });
+      // Fixed temp name: overwritten on every print, so no buildup of files.
+      return join(dir, "cuentalibre-print.html");
+    },
+    async () => join(await downloadDir(), "cuentalibre-print.html"),
+  ];
+  for (const locate of candidates) {
     try {
-      await message(t.failedBody, { title: t.failedTitle, kind: "error" });
-    } catch {
-      // Last resort — the dialog itself failed; nothing more we can do.
+      const filePath = await locate();
+      await writeTextFile(filePath, html);
+      // openPath hands the .html file to the default browser.
+      // (Requires the "opener:allow-open-path" capability.)
+      await openPath(filePath);
+      return; // success — document is open in the browser
+    } catch (e) {
+      lastError = e;
     }
+  }
+  // Every location failed: show the real error so the cause is visible
+  // instead of a generic "something went wrong".
+  const detail =
+    lastError instanceof Error ? lastError.message : String(lastError);
+  try {
+    await message(`${t.failedBody}\n\n${detail}`, {
+      title: t.failedTitle,
+      kind: "error",
+    });
+  } catch {
+    // Last resort — the dialog itself failed; nothing more we can do.
   }
 }
 
