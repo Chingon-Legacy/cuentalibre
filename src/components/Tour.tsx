@@ -40,7 +40,11 @@ export default function Tour({ steps, onDone }: Props) {
       return;
     }
     el.classList.add("tour-highlight");
-    el.scrollIntoView({ block: "nearest", behavior: "smooth" });
+    // Scroll FIRST and measure AFTER. The old code used a smooth scroll and
+    // measured synchronously, so the rect was the pre-scroll one and the card
+    // could land completely off-screen with no way to reach it. An instant
+    // scroll makes the measurement valid right away.
+    el.scrollIntoView({ block: "center", behavior: "auto" });
     const place = () => {
       const r = el.getBoundingClientRect();
       const cardH = 210;
@@ -49,6 +53,8 @@ export default function Tour({ steps, onDone }: Props) {
       if (top + cardH > window.innerHeight) {
         top = Math.max(12, r.top - cardH - 12);
       }
+      // Never let the card escape the viewport in either direction.
+      top = Math.max(12, Math.min(top, window.innerHeight - cardH - 12));
       const left = Math.min(Math.max(16, r.left), window.innerWidth - width - 16);
       setPos({ top, left, width });
     };

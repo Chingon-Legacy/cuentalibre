@@ -2,10 +2,14 @@ import { open } from "@tauri-apps/plugin-dialog";
 import { exists, mkdir, readFile, remove, writeFile } from "@tauri-apps/plugin-fs";
 import { appDataDir, join } from "@tauri-apps/api/path";
 import { convertFileSrc } from "@tauri-apps/api/core";
+import { isTauri } from "./external";
 
-export function isTauri(): boolean {
-  return typeof window !== "undefined" && "__TAURI_INTERNALS__" in window;
-}
+// Single Tauri check for the whole app: @tauri-apps/api's isTauri()
+// (!!window.isTauri, set by the Tauri webview). It used to be a local
+// "__TAURI_INTERNALS__" check here while external.ts used the API one —
+// both are true on desktop, but one shared check keeps mocks and
+// fallbacks honest.
+export { isTauri };
 
 const DIR = "receipts";
 const IMAGE_EXTS = ["png", "jpg", "jpeg", "webp", "gif"];

@@ -6,7 +6,10 @@ import { businessTypes } from "../data/categories";
 import { US_STATES } from "../data/us-states";
 import { fmtDate, useLang, useStrings } from "../i18n";
 import AddBusinessModal from "../components/AddBusinessModal";
+import UpdateDialog from "../components/UpdateDialog";
 import { openDonate } from "../components/SupportDialog";
+import { checkForAppUpdate } from "../updater";
+import type { Update } from "@tauri-apps/plugin-updater";
 import type { AccountingMethod, Business, Lang } from "../types";
 
 const APP_VERSION = "0.1.2";
@@ -38,6 +41,9 @@ export default function Settings({ refresh }: { refresh: () => Promise<void> }) 
     resyncAfterRestore,
   } = useBiz();
   const [note, setNote] = useState<{ msg: string; error: boolean } | null>(null);
+  const [checkingUpdate, setCheckingUpdate] = useState(false);
+  const [manualUpdate, setManualUpdate] = useState<Update | null>(null);
+  const [updateNote, setUpdateNote] = useState<string | null>(null);
   const [working, setWorking] = useState(false);
   const [remindersOn, setRemindersOn] = useState(true);
   const [showAddBiz, setShowAddBiz] = useState(false);
@@ -229,6 +235,26 @@ export default function Settings({ refresh }: { refresh: () => Promise<void> }) 
     } finally {
       setWorking(false);
     }
+  };
+
+  const doCheckUpdate = async () => {
+    setCheckingUpdate(true);
+    setUpdateNote(null);
+    try {
+      const u = await checkForAppUpdate();
+      if (u) {
+        setManualUpdate(u);
+      } else {
+        setUpdateNote(t.updater.upToDate);
+      }
+    } finally {
+      setCheckingUpdate(false);
+    }
+  };
+
+  const closeManualUpdate = () => {
+    // UpdateDialog already released the Rust-side resource on close.
+    setManualUpdate(null);
   };
 
   return (
@@ -557,10 +583,27 @@ export default function Settings({ refresh }: { refresh: () => Promise<void> }) 
           {t.settings.donate}
         </button>
         <p className="disclaimer">{t.settings.disclaimer}</p>
-        <p style={{ color: "var(--ink-faint)", fontSize: 13 }}>
-          {t.settings.version} {APP_VERSION} · MIT
-        </p>
+        <div className="settings-row" style={{ marginTop: 8 }}>
+          <div>
+            <div className="label">{t.updater.checkNow}</div>
+            <div className="desc">
+              {t.settings.version} {APP_VERSION} · MIT
+            </div>
+          </div>
+          <button
+            type="button"
+            className="btn secondary"
+            disabled={checkingUpdate}
+            onClick={doCheckUpdate}
+          >
+            {checkingUpdate ? t.updater.checking : t.updater.checkNow}
+          </button>
+        </div>
+        {updateNote && <p className="status-note">{updateNote}</p>}
       </div>
+      {manualUpdate && (
+        <UpdateDialog update={manualUpdate} onDone={closeManualUpdate} />
+      )}
     </div>
   );
 }

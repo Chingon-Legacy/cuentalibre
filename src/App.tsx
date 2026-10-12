@@ -63,6 +63,9 @@ import type {
 } from "./types";
 import { checkDueReminders, type ReminderStrings } from "./notify";
 import Tour, { type TourStep } from "./components/Tour";
+import UpdateDialog from "./components/UpdateDialog";
+import { checkForAppUpdate } from "./updater";
+import type { Update } from "@tauri-apps/plugin-updater";
 import HelpPanel from "./components/HelpPanel";
 import SupportDialog from "./components/SupportDialog";
 import MoreMenu, { type MoreMenuItem } from "./components/MoreMenu";
@@ -321,6 +324,7 @@ function Shell({
   const [tourOpen, setTourOpen] = useState(false);
   const [moreOpen, setMoreOpen] = useState(false); // desktop dropdown
   const [sheetOpen, setSheetOpen] = useState(false); // mobile bottom sheet
+  const [pendingUpdate, setPendingUpdate] = useState<Update | null>(null);
   const moreWrapRef = useRef<HTMLDivElement>(null);
   const { isNonprofit } = useBiz();
 
@@ -411,6 +415,24 @@ function Shell({
     } catch {
       // Not fatal — the tour just shows again next launch.
     }
+  }, []);
+
+  // Auto-update (desktop only): check once per launch. The dialog waits its
+  // turn behind the support dialog and the tour so modals never pile up.
+  useEffect(() => {
+    if (!ready) return;
+    let cancelled = false;
+    checkForAppUpdate().then((u) => {
+      if (!cancelled && u) setPendingUpdate(u);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [ready]);
+
+  const closeUpdateDialog = useCallback(() => {
+    // UpdateDialog already released the Rust-side resource on close.
+    setPendingUpdate(null);
   }, []);
 
   const tourSteps: TourStep[] = useMemo(
@@ -605,6 +627,9 @@ function Shell({
       {helpOpen && <HelpPanel onClose={() => setHelpOpen(false)} />}
       {supportOpen && <SupportDialog onClose={() => setSupportOpen(false)} />}
       {tourOpen && ready && <Tour steps={tourSteps} onDone={closeTour} />}
+      {pendingUpdate && !supportOpen && !tourOpen && (
+        <UpdateDialog update={pendingUpdate} onDone={closeUpdateDialog} />
+      )}
     </>
   );
 }

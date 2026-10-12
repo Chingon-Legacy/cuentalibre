@@ -59,12 +59,15 @@ const en = {
     entityNonprofit: "Nonprofit organization",
     entityNonprofitDesc: "A charity or community organization with a mission.",
     nameTitle: "What's your business called?",
+    nameTitleOrg: "What's your organization called?",
     nameSub: "It shows at the top of your app and on your invoices.",
     namePh: "Business name",
+    namePhOrg: "Organization name",
     bizTitle: "What kind of business do you have?",
     bizSub:
       "We'll pick the money categories that fit your kind of work. You can change them later in Settings.",
     stateTitle: "What state is your business in?",
+    stateTitleOrg: "What state is your organization in?",
     stateSub:
       "We'll put your state's base sales tax rate on your invoices. You can change it later in Settings.",
     statePh: "Choose your state…",
@@ -73,6 +76,7 @@ const en = {
     start: "Start using CuentaLibre",
     celebrateTitle: "You're all set!",
     celebrateSub: "Let's take care of your business money.",
+    celebrateSubOrg: "Let's take care of your organization's funds.",
     setupFailed: "Something went wrong while saving your setup. Nothing was lost — please try again.",
     tryAgain: "Try again",
   },
@@ -455,6 +459,24 @@ const en = {
       "Count money when you bill it. An invoice counts as income when you send it, even if they haven't paid yet.",
     acctGuidance:
       "Use the same method as your tax return. If you're not sure, ask your preparer — switching methods mid-year can cause tax headaches.",
+  },
+
+  updater: {
+    title: "Update available",
+    body: "CuentaLibre {version} is ready. It includes fixes and improvements — updating keeps your data safe.",
+    updateNow: "Update now",
+    later: "Later",
+    downloading: "Downloading update… {pct}%",
+    installed: "Update installed!",
+    restartNote:
+      "Please close and reopen CuentaLibre to start using the new version.",
+    failed: "The update didn't finish.",
+    failedNote:
+      "Check your internet connection and try again later from Settings.",
+    close: "Close",
+    checkNow: "Check for updates",
+    checking: "Checking…",
+    upToDate: "You're on the latest version.",
   },
 
   common: {
@@ -1052,12 +1074,15 @@ const es: typeof en = {
     entityNonprofit: "Organización sin fines de lucro",
     entityNonprofitDesc: "Una organización comunitaria o de caridad con una misión.",
     nameTitle: "¿Cómo se llama tu negocio?",
+    nameTitleOrg: "¿Cómo se llama tu organización?",
     nameSub: "Aparecerá en la parte superior de tu app y en tus facturas.",
     namePh: "Nombre del negocio",
+    namePhOrg: "Nombre de la organización",
     bizTitle: "¿Qué tipo de negocio tienes?",
     bizSub:
       "Elegiremos las categorías que se adapten a tu tipo de trabajo. Puedes cambiarlas después en Ajustes.",
     stateTitle: "¿En qué estado está tu negocio?",
+    stateTitleOrg: "¿En qué estado está tu organización?",
     stateSub:
       "Pondremos la tasa base de impuesto sobre las ventas de tu estado en tus facturas. Puedes cambiarla después en Ajustes.",
     statePh: "Elige tu estado…",
@@ -1066,6 +1091,7 @@ const es: typeof en = {
     start: "Empezar a usar CuentaLibre",
     celebrateTitle: "¡Todo listo!",
     celebrateSub: "Cuidemos el dinero de tu negocio.",
+    celebrateSubOrg: "Cuidemos los fondos de tu organización.",
     setupFailed: "Algo salió mal al guardar tu configuración. No se perdió nada — intenta de nuevo.",
     tryAgain: "Intentar de nuevo",
   },
@@ -1448,6 +1474,24 @@ const es: typeof en = {
       "Cuenta el dinero cuando lo facturas. Una factura cuenta como ingreso cuando la envías, aunque aún no te hayan pagado.",
     acctGuidance:
       "Usa el mismo método que tu declaración de impuestos. Si no estás seguro, pregúntale a tu preparador — cambiar de método a mitad de año puede causar problemas con los impuestos.",
+  },
+
+  updater: {
+    title: "Actualización disponible",
+    body: "CuentaLibre {version} está lista. Incluye correcciones y mejoras — actualizar mantiene tus datos seguros.",
+    updateNow: "Actualizar ahora",
+    later: "Más tarde",
+    downloading: "Descargando actualización… {pct}%",
+    installed: "¡Actualización instalada!",
+    restartNote:
+      "Cierra y vuelve a abrir CuentaLibre para empezar a usar la nueva versión.",
+    failed: "La actualización no terminó.",
+    failedNote:
+      "Revisa tu conexión a internet e inténtalo de nuevo más tarde desde Ajustes.",
+    close: "Cerrar",
+    checkNow: "Buscar actualizaciones",
+    checking: "Buscando…",
+    upToDate: "Tienes la versión más reciente.",
   },
 
   common: {

@@ -601,8 +601,10 @@ body {
 }
 
 .btn:disabled {
-  opacity: 0.55;
+  opacity: 0.4;
   cursor: default;
+  /* A greyed, flat look so a disabled button can't be mistaken for active. */
+  filter: saturate(0.3);
 }
 
 /* Clear, friendly focus ring for keyboard users. */

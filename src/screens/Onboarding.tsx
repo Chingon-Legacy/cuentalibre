@@ -151,7 +151,7 @@ export default function Onboarding({ onDone }: Props) {
 
       {step === 2 && (
         <div className="onboard-step" key="step-2">
-          <h1>{t.onboarding.nameTitle}</h1>
+          <h1>{isNfp ? t.onboarding.nameTitleOrg : t.onboarding.nameTitle}</h1>
           <p className="subtitle">{t.onboarding.nameSub}</p>
           <div className="field" style={{ maxWidth: 420, margin: "0 auto" }}>
             <input
@@ -159,7 +159,7 @@ export default function Onboarding({ onDone }: Props) {
               value={name}
               autoFocus
               maxLength={80}
-              placeholder={t.onboarding.namePh}
+              placeholder={isNfp ? t.onboarding.namePhOrg : t.onboarding.namePh}
               onChange={(e) => setName(e.target.value)}
               onKeyDown={(e) => {
                 if (e.key === "Enter" && name.trim()) setStep(isNfp ? 4 : 3);
@@ -212,7 +212,7 @@ export default function Onboarding({ onDone }: Props) {
 
       {step === 4 && (
         <div className="onboard-step" key="step-4">
-          <h1>{t.onboarding.stateTitle}</h1>
+          <h1>{isNfp ? t.onboarding.stateTitleOrg : t.onboarding.stateTitle}</h1>
           <p className="subtitle">{t.onboarding.stateSub}</p>
           <div className="field" style={{ maxWidth: 420, margin: "0 auto" }}>
             <select
@@ -268,7 +268,7 @@ export default function Onboarding({ onDone }: Props) {
               🎉
             </div>
             <h1>{t.onboarding.celebrateTitle}</h1>
-            <p>{t.onboarding.celebrateSub}</p>
+            <p>{isNfp ? t.onboarding.celebrateSubOrg : t.onboarding.celebrateSub}</p>
           </div>
         </div>
       )}
