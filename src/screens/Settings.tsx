@@ -12,7 +12,7 @@ import { checkForAppUpdate } from "../updater";
 import type { Update } from "@tauri-apps/plugin-updater";
 import type { AccountingMethod, Business, Lang } from "../types";
 
-const APP_VERSION = "0.1.3";
+const APP_VERSION = "0.1.4";
 
 function bizTypeLabel(b: Business, lang: Lang): string {
   if (b.entity_type === "nonprofit") {
